@@ -1,0 +1,1 @@
+C:\Users\irvin\UVG\Septimo_Semestre\Clases\Lenguajes\m2_lexic_analysis\direct_afd_construction\target\debug\direct_afd_construction.exe: C:\Users\irvin\UVG\Septimo_Semestre\Clases\Lenguajes\m2_lexic_analysis\direct_afd_construction\src\main.rs
