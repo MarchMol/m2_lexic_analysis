@@ -1,0 +1,19 @@
+# Dependencias de cargo
+/target/
+
+# Archivos de configuración del editor
+.idea/
+/.vscode/
+
+# Archivos de compilación de Rust
+*.rs.bk
+
+# Archivos temporales del sistema
+.DS_Store
+Thumbs.db
+
+# Archivos de caché de Cargo
+/cargo.lock
+
+# Otros archivos generados
+*.log
