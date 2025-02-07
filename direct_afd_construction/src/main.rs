@@ -1,29 +1,39 @@
-use serde::Deserialize;
-use std::collections::HashMap;
-use std::fs::File;
-use std::io::BufReader;
-mod inf_to_pos;
-mod automata;
-
-#[derive(Deserialize, Debug)]
-struct AFD {
-    Q: Vec<String>,             // Lista de estados
-    Σ: Vec<String>,             // Alfabeto
-    q0: String,                 // Estado inicial
-    F: Vec<String>,             // Conjunto de estados finales
-    δ: HashMap<String, String>, // Función de transición (mapeo de transiciones)
-}
+mod automata; // Importamos el módulo automata.rs
 
 fn main() {
-    // let file = File::open("./automatas/afd_example.json").unwrap();
-    // let reader = BufReader::new(file);
-    // let afd: AFD = serde_json::from_reader(reader).unwrap();
+    // Definimos el número de estados y las transiciones (estado_origen, carácter_transición, estado_destino)
+    let quantity_states = 3;
+    let transitions = vec![
+        (0, 'a', 1), // Transición de s0 a s1 con el carácter 'a'
+        (1, 'b', 2), // Transición de s1 a s2 con el carácter 'b'
+        (2, 'a', 0), // Transición de s2 a s0 con el carácter 'a'
+    ];
 
-    // // Imprime los campos de la estructura AFD
-    // println!("Q: {:?}", afd.Q);
-    // println!("Σ: {:?}", afd.Σ);
-    // println!("q0: {}", afd.q0);
-    // println!("F: {:?}", afd.F);
-    // printl!("δ: {:?}", afd.δ);
-    inf_to_pos::inf_to_pos(r"[a-z]xd[0-9]\*");
+    // Generamos el AFD usando la función `generate` de automata.rs
+    let root = automata::generate(quantity_states, transitions);
+
+    match root {
+        Some(r) => {
+            // Imprimimos el nodo raíz y sus transiciones
+            println!("Nodo raíz: {}", r.name);
+
+            // Imprimir las transiciones del nodo raíz
+            for edge in r.edges.borrow().iter() {
+                match edge.destination.upgrade() {
+                    Some(destination) => {
+                        println!(
+                            "Transición desde {} a {} con el carácter '{}'",
+                            r.name, destination.name, edge.transition_char
+                        );
+                    }
+                    None => {
+                        println!("La transición desde {} no tiene un destino válido.", r.name);
+                    }
+                }
+            }
+        }
+        None => {
+            println!("No se pudo generar el AFD.");
+        }
+    }
 }
