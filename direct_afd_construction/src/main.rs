@@ -3,6 +3,8 @@ mod inf_to_pos;
 mod grammar_tree;
 mod direct_afd;
 
+use std::rc::Rc;
+
 use crate::inf_to_pos::Token;
 use crate::direct_afd::DirectAFD;
 use crate::grammar_tree::Tree;
@@ -15,17 +17,18 @@ fn main() {
 
     // Despues inicializamos el grammar tree
     let mut gtree = grammar_tree::Tree::new();
-
+    
     // Ya con el gtree, podemos generar el arbol a partir de la postfix
     let root = gtree.generate(postfix);
-    
     // Este value, solo es el resultado de llamar a la función printTree, que te regresa una string con masomenos el arbol
     let value = (*root).clone().printTree(0, "root: ");
     // Si imprimimos value, nos va a salir el arbol
     // print!("{}",value);
+    let gtree_ref = Rc::new(gtree);
 
-    let mut afd = DirectAFD::new(gtree);
+    let mut afd = DirectAFD::new(gtree_ref);
     // Asignamos etiquetas a los nodos del árbol
+    
     let labels = afd.read_tree();
     println!("Etiquetas de los nodos: {:?}", labels);
 }

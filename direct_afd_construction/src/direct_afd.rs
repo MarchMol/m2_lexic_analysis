@@ -1,16 +1,17 @@
 use std::collections::{HashMap, HashSet};
+use std::rc::Rc;
 use crate::grammar_tree::{Tree, TreeNode};
 use crate::inf_to_pos::Token;
 
 pub struct DirectAFD {
-    syntax_tree: Tree,
+    syntax_tree: Rc<Tree>,
     followpos: HashMap<usize, HashSet<usize>>,
     states: Vec<HashSet<usize>>,
     transitions: HashMap<(usize, char), usize>,
 }
 
 impl DirectAFD {
-    pub fn new(tree: Tree) -> Self {
+    pub fn new(tree: Rc<Tree>) -> Self {
         Self {
             syntax_tree: tree,
             followpos: HashMap::new(),
@@ -36,6 +37,7 @@ impl DirectAFD {
     
         // Función recursiva que recorre el árbol y asigna los valores
         pub fn traverse(
+            
             node: &TreeNode,
             labels: &mut HashMap<String, Token>,
             literal_count: &mut usize,
@@ -78,9 +80,10 @@ impl DirectAFD {
                 _ => unreachable!("Unexpected token type in syntax tree"),
             }
         }
-    
+        
         // Llamar a la función de recorrido desde la raíz
         if let Some(root_node) = self.syntax_tree.get_root() {
+            
             traverse(&root_node, &mut labels, &mut literal_count, &mut union_count, &mut kleene_count, &mut concat_count);
         }
     

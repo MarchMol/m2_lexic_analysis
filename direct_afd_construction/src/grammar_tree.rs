@@ -1,9 +1,10 @@
 use std::{cell::RefCell, rc::{Rc, Weak}, sync::mpsc::TryRecvError};
 
 use crate::inf_to_pos::Token;
+#[derive(Debug, PartialEq, Clone)]
 pub struct Tree{
     nodes: Vec<TreeNode>,
-    root: Option<TreeNode>
+    root: Option<Rc<TreeNode>>
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -106,10 +107,12 @@ impl Tree{
             }
             
         }
-        Rc::new(stack[0].clone())
+        let root_node = Some(Rc::new(stack[0].clone()));
+        self.root = Some(Rc::new(stack[0].clone()));
+        root_node.unwrap()
     }
 
-    pub fn get_root(&self) -> Option<TreeNode> {
+    pub fn get_root(&self) -> Option<Rc<TreeNode>> {
         self.root.clone()
     }
 }
