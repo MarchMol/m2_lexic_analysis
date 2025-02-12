@@ -6,7 +6,7 @@ use std::{
 };
 
 #[derive(Debug, PartialEq, Clone)]
-enum Token {
+pub enum Token {
     Kleene,            // *
     Union,             // |
     Plus,              // +
@@ -72,7 +72,7 @@ fn implicit_concat(prev: &Token, next: &Token) -> bool {
                 Token::Kleene | Token::Plus,
                 Token::Literal(_) | Token::Range(_, _)
             )
-            | (Token::Kleene | Token::Plus, Token::LParen)
+            | (Token::Kleene | Token::Plus | Token::Union, Token::LParen)
             | (Token::RParen, Token::LParen)
     )
 }
@@ -86,28 +86,61 @@ fn precedence(token: &Token) -> usize {
     };
     prec
 }
-// fn shunting_yard(tokens: Vec<Token>) {
-//     let mut queue: VecDeque<Token> = VecDeque::new();
-//     let mut stack: Vec<Token> = Vec::new();
-//     for tk in tokens {
-//         match tk {
-//             (Token::Literal(c) | Token::Range(c, _)) => {
-//                 queue.push_back(tk);
-//             }
-//             (Token::Kleene | Token::Concat | Token::Plus | Token::Union) => match stack.last() {
-//                 Some(last) => {
-//                     while !stack.is_empty() && precedence(last) >= precedence(&tk) {
-//                         queue.push_back(last.clone());
-//                         stack.pop();
-//                     }
-//                 }
-//                 None => println!("Empty stack"),
-//             },
-//             _ => {}
-//         }
-//     }
-// }
-pub fn inf_to_pos(input: &str) {
+fn shunting_yard(tokens: Vec<Token>)->VecDeque<Token>{
+    let mut queue: VecDeque<Token> = VecDeque::new();
+    let mut stack: Vec<Token> = Vec::new();
+    for tk in tokens {
+        match tk {
+            Token::Literal(c) | Token::Range(c, _) => {
+                queue.push_back(tk);
+            },
+            Token::LParen =>{
+                stack.push(tk);
+            }
+            Token::RParen =>{
+                while let Some(last) = stack.last().cloned(){
+                    if last!=Token::LParen{
+                        queue.push_back(last);
+                        stack.pop();
+                    }else{
+                        stack.pop();
+                        break;
+                    }
+                }
+            }
+
+            (Token::Kleene | Token::Concat | Token::Plus | Token::Union) =>{
+                while let Some(last) = stack.last().cloned(){
+
+                    if precedence(&last)>precedence(&tk){
+                        
+                        queue.push_back(last);
+                        stack.pop();
+                    } else{
+                        break;
+                    }
+                }
+                stack.push(tk);
+            },
+            _=> {}
+        }
+    }
+    while !stack.is_empty(){
+        match stack.pop(){
+            Some(tk) =>{
+                queue.push_back(tk);
+            },
+            _=>{}
+        }
+    
+    }
+    queue
+}
+pub fn inf_to_pos(input: &str) ->Vec<Token>{
     let tokens = tokenize(input);
-    println!("{:?}", tokens)
+    // println!("{:?}", tokens);
+    let posttoks = shunting_yard(tokens);
+    // println!("{:?}", posttoks);
+    Vec::from(posttoks)
+
 }
