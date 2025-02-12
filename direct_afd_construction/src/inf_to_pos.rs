@@ -14,8 +14,8 @@ pub enum Token {
     Literal(char),     // Caracter individual
     Range(char, char), // Rango, como a-z o 1-9
     LParen,            // (
-    RParen,            // ),
-    Sentinel,            // )
+    RParen,            // )
+    Sentinel,          // #
 }
 
 fn tokenize(input: &str) -> Vec<Token> {

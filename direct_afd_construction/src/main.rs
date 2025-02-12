@@ -1,24 +1,35 @@
-
-
 mod automata; // Importamos el módulo automata.rs
 mod inf_to_pos;
 mod grammar_tree;
+mod direct_afd;
+
 use crate::inf_to_pos::Token;
+use crate::direct_afd::DirectAFD;
+use crate::grammar_tree::Tree;
+
 fn main() {
+
     //  Primero, convertimos la regex a postfix :[a-z]|(bc)*\*
     let postfix:Vec<Token> = inf_to_pos::inf_to_pos(r"(a|b)*abb#");
-    println!("{:?}",&postfix);
+    // println!("{:?}",&postfix);
+
     // Despues inicializamos el grammar tree
     let mut gtree = grammar_tree::Tree::new();
+
     // Ya con el gtree, podemos generar el arbol a partir de la postfix
     let root = gtree.generate(postfix);
     
     // Este value, solo es el resultado de llamar a la función printTree, que te regresa una string con masomenos el arbol
     let value = (*root).clone().printTree(0, "root: ");
     // Si imprimimos value, nos va a salir el arbol
-    print!("{}",value);
+    // print!("{}",value);
 
+    let mut afd = DirectAFD::new(gtree);
+    // Asignamos etiquetas a los nodos del árbol
+    let labels = afd.read_tree();
+    println!("Etiquetas de los nodos: {:?}", labels);
 }
+
 fn automata_stuff(){
     let mut grafo = automata::Graph::new();
     let quantity_states = 3;

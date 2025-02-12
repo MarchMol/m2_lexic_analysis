@@ -35,6 +35,18 @@ impl TreeNode{
         }
         ret
     }
+
+    pub fn get_left(&self) -> Option<Rc<TreeNode>> {
+        self.left.clone()
+    }
+
+    pub fn get_right(&self) -> Option<Rc<TreeNode>> {
+        self.right.clone()
+    }
+
+    pub fn get_value(&self) -> &Token {
+        &self.value
+    }
 }
 
 impl Tree{
@@ -95,5 +107,9 @@ impl Tree{
             
         }
         Rc::new(stack[0].clone())
+    }
+
+    pub fn get_root(&self) -> Option<TreeNode> {
+        self.root.clone()
     }
 }
