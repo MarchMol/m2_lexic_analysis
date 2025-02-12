@@ -72,15 +72,15 @@ fn implicit_concat(prev: &Token, next: &Token) -> bool {
                 Token::Kleene | Token::Plus,
                 Token::Literal(_) | Token::Range(_, _)
             )
-            | (Token::Kleene | Token::Plus | Token::Union, Token::LParen)
+            | (Token::Kleene | Token::Plus, Token::LParen)
             | (Token::RParen, Token::LParen)
     )
 }
 fn precedence(token: &Token) -> usize {
     let prec = match token {
-        Token::Kleene => 2,
-        Token::Plus => 2,
-        Token::Union => 1,
+        Token::Kleene => 3,
+        Token::Plus => 3,
+        Token::Concat => 2,
         Token::Union => 1,
         _ => 0,
     };
@@ -138,9 +138,7 @@ fn shunting_yard(tokens: Vec<Token>)->VecDeque<Token>{
 }
 pub fn inf_to_pos(input: &str) ->Vec<Token>{
     let tokens = tokenize(input);
-    // println!("{:?}", tokens);
     let posttoks = shunting_yard(tokens);
-    // println!("{:?}", posttoks);
     Vec::from(posttoks)
 
 }
