@@ -6,12 +6,13 @@ mod grammar_tree;
 use crate::inf_to_pos::Token;
 fn main() {
     //  Primero, convertimos la regex a postfix :[a-z]|(bc)*\*
-    let postfix:Vec<Token> = inf_to_pos::inf_to_pos(r"[a-z]|(bc)*\*");
-
+    let postfix:Vec<Token> = inf_to_pos::inf_to_pos(r"(a|b)*abb#");
+    println!("{:?}",&postfix);
     // Despues inicializamos el grammar tree
     let mut gtree = grammar_tree::Tree::new();
     // Ya con el gtree, podemos generar el arbol a partir de la postfix
     let root = gtree.generate(postfix);
+    
     // Este value, solo es el resultado de llamar a la función printTree, que te regresa una string con masomenos el arbol
     let value = (*root).clone().printTree(0, "root: ");
     // Si imprimimos value, nos va a salir el arbol

@@ -14,7 +14,8 @@ pub enum Token {
     Literal(char),     // Caracter individual
     Range(char, char), // Rango, como a-z o 1-9
     LParen,            // (
-    RParen,            // )
+    RParen,            // ),
+    Sentinel,            // )
 }
 
 fn tokenize(input: &str) -> Vec<Token> {
@@ -26,7 +27,8 @@ fn tokenize(input: &str) -> Vec<Token> {
                 if let Some(next_c) = chars.next() {
                     tokens.push(Token::Literal(next_c))
                 }
-            }
+            },
+            '#' => tokens.push(Token::Sentinel),
             '*' => tokens.push(Token::Kleene),
             '|' => tokens.push(Token::Union),
             '+' => tokens.push(Token::Plus),
@@ -64,13 +66,13 @@ fn implicit_concat(prev: &Token, next: &Token) -> bool {
     matches!(
         (prev, next),
         (
-            Token::Literal(_) | Token::Range(_, _),
-            Token::Literal(_) | Token::Range(_, _)
+            Token::Literal(_) | Token::Range(_, _) | Token::Sentinel,
+            Token::Literal(_) | Token::Range(_, _) | Token::Sentinel
         ) | (Token::Literal(_) | Token::Range(_, _), Token::LParen)
-            | (Token::RParen, Token::Literal(_) | Token::Range(_, _))
+            | (Token::RParen, Token::Literal(_) | Token::Range(_, _) | Token::Sentinel)
             | (
                 Token::Kleene | Token::Plus,
-                Token::Literal(_) | Token::Range(_, _)
+                Token::Literal(_) | Token::Range(_, _) | Token::Sentinel
             )
             | (Token::Kleene | Token::Plus, Token::LParen)
             | (Token::RParen, Token::LParen)
@@ -107,6 +109,9 @@ fn shunting_yard(tokens: Vec<Token>)->VecDeque<Token>{
                         break;
                     }
                 }
+            },
+            Token::Sentinel=>{
+                queue.push_back(tk);
             }
 
             (Token::Kleene | Token::Concat | Token::Plus | Token::Union) =>{

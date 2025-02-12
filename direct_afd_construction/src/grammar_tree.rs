@@ -57,7 +57,7 @@ impl Tree{
                 },
                 Token::Concat | Token::Union=>{
                     match (stack.pop(), stack.pop()){
-                        (Some(first), Some(second))=>{
+                        (Some(second), Some(first))=>{
                             let operator = TreeNode{
                                 value: tk,
                                 left: Some(Rc::new(first)),
@@ -69,7 +69,7 @@ impl Tree{
                     }
 
                 },
-                Token::Kleene | Token::Union=>{
+                (Token::Kleene | Token::Union)=>{
                     match stack.pop(){
                         Some(first)=>{
                             let operator = TreeNode{
@@ -81,7 +81,15 @@ impl Tree{
                         }
                         _=>{}
                     }
-                }
+                },
+                Token::Sentinel=>{
+                    let newnode = TreeNode{
+                        value: tk, 
+                        left: None,
+                        right: None
+                    };
+                    stack.push(newnode);
+                },
                 _=>{}
             }
             
