@@ -37,7 +37,7 @@ impl DirectAFD {
         let mut kleene_count = 1;
         let mut concat_count = 1;
         let mut root_key = String::new();
-    
+
         // Función recursiva que recorre el árbol y asigna etiquetas
         fn traverse(
             node: &TreeNode,
@@ -48,9 +48,27 @@ impl DirectAFD {
             concat_count: &mut usize,
         ) -> String {
             // Obtener los identificadores de los hijos (si existen)
-            let left_id = node.get_left().map(|left| traverse(&left, labels, literal_count, union_count, kleene_count, concat_count));
-            let right_id = node.get_right().map(|right| traverse(&right, labels, literal_count, union_count, kleene_count, concat_count));
-    
+            let left_id = node.get_left().map(|left| {
+                traverse(
+                    &left,
+                    labels,
+                    literal_count,
+                    union_count,
+                    kleene_count,
+                    concat_count,
+                )
+            });
+            let right_id = node.get_right().map(|right| {
+                traverse(
+                    &right,
+                    labels,
+                    literal_count,
+                    union_count,
+                    kleene_count,
+                    concat_count,
+                )
+            });
+
             // Asignar identificador al nodo actual
             let node_id = match node.get_value() {
                 Token::Literal(c) => {
@@ -91,23 +109,30 @@ impl DirectAFD {
                 }
                 _ => unreachable!("Unexpected token type in syntax tree"),
             };
-    
+
             node_id
         }
-    
+
         // Llamar a la función de recorrido desde la raíz
         if let Some(root_node) = self.syntax_tree.get_root() {
             // Realizamos el recorrido y asignamos las etiquetas
-            root_key = traverse(&root_node, &mut labels, &mut literal_count, &mut union_count, &mut kleene_count, &mut concat_count);
+            root_key = traverse(
+                &root_node,
+                &mut labels,
+                &mut literal_count,
+                &mut union_count,
+                &mut kleene_count,
+                &mut concat_count,
+            );
         }
-    
+
         (labels, root_key)
     }
 
     pub fn find_nullable(&self) -> HashMap<String, bool> {
         let (tree_map, _key) = self.read_tree();
         let mut nullable_map = HashMap::new();
-    
+
         // Primera pasada: inicializar literales y Sentinel
         for (key, value) in &tree_map {
             if value.starts_with("Literal") {
@@ -117,16 +142,16 @@ impl DirectAFD {
                 nullable_map.insert(key.clone(), false);
             }
         }
-    
+
         // Fijación: Realizar múltiples pasadas hasta que no haya cambios
         let mut changes = true;
         while changes {
             changes = false;
-    
+
             // Segunda pasada: calcular valores de Kleene, Concat y Union
             for (key, value) in &tree_map {
                 let original_nullable = nullable_map.get(key).cloned();
-    
+
                 if key.starts_with("beta") {
                     // Kleene (beta): El valor siempre es true
                     nullable_map.insert(key.clone(), true);
@@ -143,22 +168,24 @@ impl DirectAFD {
                         nullable_map.insert(key.clone(), nullable_c1 || nullable_c2);
                     }
                 }
-    
+
                 // Si hubo un cambio, marcamos que hay cambios
                 if nullable_map.get(key) != original_nullable.as_ref() {
                     changes = true;
                 }
             }
         }
-    
+
         nullable_map
-    }    
-      
-    pub fn find_first_last_pos(&self) -> (HashMap<String, Vec<String>>, HashMap<String, Vec<String>>) {
+    }
+
+    pub fn find_first_last_pos(
+        &self,
+    ) -> (HashMap<String, Vec<String>>, HashMap<String, Vec<String>>) {
         let (tree_map, _key) = self.read_tree();
         let mut firstpos_map: HashMap<String, Vec<String>> = HashMap::new();
         let mut lastpos_map: HashMap<String, Vec<String>> = HashMap::new();
-        
+
         // Primera pasada: Inicializar Literales
         for (key, value) in &tree_map {
             if value.starts_with("Literal") || value.starts_with("Sentinel") {
@@ -167,17 +194,17 @@ impl DirectAFD {
                 lastpos_map.insert(key.clone(), vec![key.clone()]);
             }
         }
-        
+
         // Fijación: Realizar múltiples pasadas hasta que no haya cambios
         let mut changes = true;
         while changes {
             changes = false;
-            
+
             // Segunda pasada: Procesar los nodos no Literales
             for (key, value) in &tree_map {
                 let original_firstpos = firstpos_map.get(key).cloned();
                 let original_lastpos = lastpos_map.get(key).cloned();
-                
+
                 if key.starts_with("beta") {
                     // Kleene (beta): Igualar firstpos y lastpos al nodo al que está conectado
                     if let Some(c1) = extract_single_child(value) {
@@ -193,11 +220,11 @@ impl DirectAFD {
                         let firstpos_c2 = firstpos_map.get(&c2).cloned().unwrap_or_default();
                         let lastpos_c1 = lastpos_map.get(&c1).cloned().unwrap_or_default();
                         let lastpos_c2 = lastpos_map.get(&c2).cloned().unwrap_or_default();
-                        
+
                         // Unión de firstpos y lastpos
                         let firstpos = [&firstpos_c1[..], &firstpos_c2[..]].concat();
                         let lastpos = [&lastpos_c1[..], &lastpos_c2[..]].concat();
-                        
+
                         firstpos_map.insert(key.clone(), firstpos);
                         lastpos_map.insert(key.clone(), lastpos);
                     }
@@ -208,15 +235,15 @@ impl DirectAFD {
                         let firstpos_c2 = firstpos_map.get(&c2).cloned().unwrap_or_default();
                         let lastpos_c1 = lastpos_map.get(&c1).cloned().unwrap_or_default();
                         let lastpos_c2 = lastpos_map.get(&c2).cloned().unwrap_or_default();
-                        
+
                         let nullable_c1 = *self.find_nullable().get(&c1).unwrap_or(&false);
                         let nullable_c2 = *self.find_nullable().get(&c2).unwrap_or(&false);
-                        
+
                         // println!(
                         //     "Procesando nodo {} (Concat):\n  - Hijo izquierdo: {}\n  - Hijo derecho: {}\n  - Nullable Izq: {}\n  - Nullable Der: {}",
                         //     key, c1, c2, nullable_c1, nullable_c2
                         // );
-                
+
                         // println!(
                         //     "  - Firstpos izquierdo: {:?}\n  - Firstpos derecho: {:?}",
                         //     firstpos_c1, firstpos_c2
@@ -232,7 +259,7 @@ impl DirectAFD {
                         } else {
                             firstpos_c1
                         };
-                        
+
                         // Lastpos: Si el derecho es nullable, hacer unión con el izquierdo
                         let lastpos = if nullable_c2 {
                             [&lastpos_c2[..], &lastpos_c1[..]].concat()
@@ -244,19 +271,21 @@ impl DirectAFD {
                         //     "  - Firstpos final: {:?}\n  - Lastpos final: {:?}",
                         //     firstpos, lastpos
                         // );
-        
+
                         firstpos_map.insert(key.clone(), firstpos);
                         lastpos_map.insert(key.clone(), lastpos);
                     }
                 }
-                
+
                 // Si hubo un cambio, marcamos que hay cambios
-                if firstpos_map.get(key) != original_firstpos.as_ref() || lastpos_map.get(key) != original_lastpos.as_ref() {
+                if firstpos_map.get(key) != original_firstpos.as_ref()
+                    || lastpos_map.get(key) != original_lastpos.as_ref()
+                {
                     changes = true;
                 }
             }
         }
-        
+
         // Retornar los dos diccionarios: firstpos_map y lastpos_map
         (firstpos_map, lastpos_map)
     }
@@ -264,15 +293,15 @@ impl DirectAFD {
     pub fn find_followpos(&self) -> HashMap<String, Vec<String>> {
         let (tree_map, _key) = self.read_tree();
         let mut followpos_map: HashMap<String, Vec<String>> = HashMap::new();
-    
+
         // Obtener firstpos y lastpos con la función existente
         let (firstpos_map, lastpos_map) = self.find_first_last_pos();
-    
+
         // Inicializar followpos con listas vacías para todos los nodos
         for key in tree_map.keys() {
             followpos_map.insert(key.clone(), Vec::new());
         }
-    
+
         // Iterar sobre los nodos para encontrar "gama" (concatenación) y "beta" (Kleene)
         for (key, value) in &tree_map {
             if key.starts_with("gama") {
@@ -281,7 +310,8 @@ impl DirectAFD {
                     if let Some(lastpos_c1) = lastpos_map.get(&c1) {
                         if let Some(firstpos_c2) = firstpos_map.get(&c2) {
                             for num in lastpos_c1 {
-                                followpos_map.entry(num.clone())
+                                followpos_map
+                                    .entry(num.clone())
                                     .and_modify(|e| e.extend(firstpos_c2.clone()))
                                     .or_insert(firstpos_c2.clone());
                             }
@@ -294,7 +324,8 @@ impl DirectAFD {
                     if let Some(lastpos_c1) = lastpos_map.get(&c1) {
                         if let Some(firstpos_c1) = firstpos_map.get(&c1) {
                             for num in lastpos_c1 {
-                                followpos_map.entry(num.clone())
+                                followpos_map
+                                    .entry(num.clone())
                                     .and_modify(|e| e.extend(firstpos_c1.clone()))
                                     .or_insert(firstpos_c1.clone());
                             }
@@ -303,7 +334,7 @@ impl DirectAFD {
                 }
             }
         }
-    
+
         // Asegurar que todos los literales y sentinels tengan followpos, aunque sea vacío
         for (key, value) in &tree_map {
             if value.starts_with("Literal") || value.starts_with("Sentinel") {
@@ -319,29 +350,34 @@ impl DirectAFD {
                 false
             }
         });
-    
+
         followpos_map
     }
-    
+
     pub fn create_states(&mut self) -> (HashMap<char, HashMap<char, char>>, Vec<char>) {
-        let mut state_map: HashMap<char, HashMap<char, char>> = HashMap::new();  // Mapa de estados y sus transiciones
-        let mut acceptance_states: Vec<char> = Vec::new();  // Lista de estados de aceptación
-        let mut state_queue: HashMap<String, Vec<String>> = HashMap::new();  // Cola de estados por procesar
-        let mut visited_states: HashMap<String, Vec<String>> = HashMap::new();  // Para evitar procesar estados duplicados
+        let mut state_map: HashMap<char, HashMap<char, char>> = HashMap::new(); // Mapa de estados y sus transiciones
+        let mut acceptance_states: Vec<char> = Vec::new(); // Lista de estados de aceptación
+        let mut state_queue: HashMap<String, Vec<String>> = HashMap::new(); // Cola de estados por procesar
+        let mut visited_states: HashMap<String, Vec<String>> = HashMap::new(); // Para evitar procesar estados duplicados
         let mut state_letter = 'A';
-        
+
         // Obtener el firstpos del nodo raíz
-        let (mut  labels_map, root_key) = self.read_tree();
-        let root_firstpos = self.find_first_last_pos().0.get(&root_key).unwrap_or(&Vec::new()).clone();
+        let (mut labels_map, root_key) = self.read_tree();
+        let root_firstpos = self
+            .find_first_last_pos()
+            .0
+            .get(&root_key)
+            .unwrap_or(&Vec::new())
+            .clone();
         state_queue.insert(state_letter.to_string(), root_firstpos.clone());
 
         let followpos_map = self.find_followpos();
         labels_map.retain(|key, _| followpos_map.contains_key(key));
         let mut columns: HashSet<String> = HashSet::new();
         for (_key, value) in &labels_map {
-                if value.starts_with("Literal") {
-                    if let Some(c) = value.chars().nth(9) {
-                    columns.insert(c.to_string());  // Insertar el valor extraído en el HashSet
+            if value.starts_with("Literal") {
+                if let Some(c) = value.chars().nth(9) {
+                    columns.insert(c.to_string()); // Insertar el valor extraído en el HashSet
                 }
             }
         }
@@ -351,12 +387,12 @@ impl DirectAFD {
             let (state_key, state_value) = state_queue.drain().next().unwrap();
             // Agregar el estado a visited_states
             visited_states.insert(state_key.clone(), state_value.clone());
-        
+
             // Crea los valores de cada columna
             for column in &columns {
                 let mut column_vector: Vec<String> = Vec::new();
                 let mut assigned_letter = None;
-                
+
                 // Verificar que números en state_value están asociados a la columna
                 for number in &state_value {
                     if let Some(symbol) = labels_map.get(number) {
@@ -372,7 +408,7 @@ impl DirectAFD {
 
                 // Si el column_vector tiene elementos, guardamos en state_map
                 if !column_vector.is_empty() {
-                    // Verificar si el estado creado ya existe 
+                    // Verificar si el estado creado ya existe
                     if !visited_states.values().any(|v| {
                         let mut v_sorted = v.clone();
                         v_sorted.sort();
@@ -396,13 +432,15 @@ impl DirectAFD {
                         assigned_letter = Some(existing_letter.clone());
                     }
                     if assigned_letter.is_none() {
-                        if let Some(existing_letter) = state_queue.iter().find_map(|(key, value)| {
-                            if value == &column_vector {
-                                Some(key)
-                            } else {
-                                None
-                            }
-                        }) {
+                        if let Some(existing_letter) =
+                            state_queue.iter().find_map(|(key, value)| {
+                                if value == &column_vector {
+                                    Some(key)
+                                } else {
+                                    None
+                                }
+                            })
+                        {
                             assigned_letter = Some(existing_letter.clone());
                         }
                     }
@@ -421,9 +459,12 @@ impl DirectAFD {
                     // Insertar o actualizar el valor en state_map
                     if let Some(assigned_letter) = assigned_letter {
                         state_map
-                        .entry(state_key.chars().next().unwrap())
-                        .or_insert_with(HashMap::new)
-                        .insert(column.chars().next().unwrap(), assigned_letter.chars().next().unwrap());
+                            .entry(state_key.chars().next().unwrap())
+                            .or_insert_with(HashMap::new)
+                            .insert(
+                                column.chars().next().unwrap(),
+                                assigned_letter.chars().next().unwrap(),
+                            );
                     }
                 }
                 // println!("Estado actual del visited_states {:?}", visited_states);
@@ -432,11 +473,139 @@ impl DirectAFD {
                 // println!("Estado actual del state_queue {:?}", state_queue);
                 // println!("Estado actual del acceptance_states {:?}", acceptance_states);
             }
-            
         }
 
         (state_map, acceptance_states)
-    } 
+    }
+
+    pub fn hopcroft_minimize(
+        state_map: &HashMap<char, HashMap<char, Vec<String>>>,
+        acceptance_states: &Vec<char>,
+    ) -> HashMap<String, Vec<String>> {
+        let mut partitions: HashMap<String, Vec<String>> = HashMap::new();
+
+        // Partición inicial: aceptación vs no aceptación
+        let mut accept_states: Vec<String> = Vec::new();
+        for state in acceptance_states {
+            accept_states.push(state.to_string()); // Convertimos a String si es necesario
+        }
+        let mut reject_states: Vec<String> = Vec::new();
+        for state in state_map.keys() {
+            if !accept_states.contains(&state.to_string()) {
+                reject_states.push(state.to_string()); // Convertimos a String si es necesario
+            }
+        }
+
+        // Agregar las particiones iniciales al mapa
+        partitions.insert("accept".to_string(), accept_states);
+        partitions.insert("reject".to_string(), reject_states);
+        partitions
+    }
+
+    pub fn refine_partitions(
+        partitions: &mut HashMap<String, Vec<String>>, // Particiones actuales
+        state_map: &HashMap<char, HashMap<char, Vec<String>>>, // Mapa de transiciones
+        symbols: &HashSet<char>,                       // Símbolos de entrada
+    ) {
+        let mut new_partitions: HashMap<String, Vec<String>> = HashMap::new();
+
+        // Para cada partición, vamos a verificar las transiciones
+        for (partition_key, partition_states) in partitions.iter() {
+            // Mapa para agrupar los estados según las transiciones
+            let mut transition_map: HashMap<char, Vec<String>> = HashMap::new();
+
+            // Para cada estado en la partición, verificamos su transición bajo cada símbolo
+            for state in partition_states {
+                // Asegurarse de que el estado tiene transiciones definidas
+                if let Some(transitions) = state_map.get(&state.chars().next().unwrap()) {
+                    for symbol in symbols {
+                        if let Some(next_states) = transitions.get(symbol) {
+                            // Asignar el estado de transición a la subpartición correcta
+                            for next_state in next_states {
+                                transition_map
+                                    .entry(*symbol)
+                                    .or_insert_with(Vec::new)
+                                    .push(next_state.clone());
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Agrupar los estados en nuevas subparticiones según sus transiciones
+            for (_, grouped_states) in transition_map {
+                let mut group_key = String::new();
+                for state in &grouped_states {
+                    // Usamos una referencia a grouped_states aquí
+                    group_key.push_str(&state);
+                }
+                new_partitions
+                    .entry(group_key)
+                    .or_insert_with(Vec::new)
+                    .extend(grouped_states); // Usamos `extend` sin mover el valor
+            }
+        }
+
+        // Actualizar las particiones con las nuevas subparticiones
+        *partitions = new_partitions;
+    }
+    pub fn build_minimized_afd(
+        partitions: HashMap<String, Vec<String>>, // Particiones finales
+        state_map: &HashMap<char, HashMap<char, Vec<String>>>, // Mapa de transiciones
+        symbols: &HashSet<char>,                  // Símbolos de entrada
+    ) -> HashMap<String, HashMap<char, String>> {
+        let mut minimized_afd: HashMap<String, HashMap<char, String>> = HashMap::new();
+
+        // Paso 1: Asignar un estado único a cada partición
+        let mut partition_to_state: HashMap<String, String> = HashMap::new();
+        let mut new_state_id = 'A'; // Comenzamos con 'A' para los estados minimizados
+
+        for (partition_key, _) in &partitions {
+            partition_to_state.insert(partition_key.clone(), new_state_id.to_string());
+            new_state_id = (new_state_id as u8 + 1) as char; // Incrementamos el estado
+        }
+
+        // Paso 2: Construir las transiciones para el AFD minimizado
+        for (partition_key, partition_states) in &partitions {
+            let minimized_state = partition_to_state.get(partition_key).unwrap(); // Obtenemos el estado minimizado para esta partición
+            let mut transitions: HashMap<char, String> = HashMap::new();
+
+            // Para cada estado dentro de la partición, recorremos sus transiciones
+            for state in partition_states {
+                if let Some(transitions_for_state) = state_map.get(&state.chars().next().unwrap()) {
+                    for symbol in symbols {
+                        if let Some(next_states) = transitions_for_state.get(symbol) {
+                            // Asegurarse de que la transición va a un estado en otra partición
+                            for next_state in next_states {
+                                if let Some(next_partition) = partition_to_state.get(next_state) {
+                                    transitions.insert(*symbol, next_partition.clone());
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Guardamos las transiciones para el estado minimizado
+            minimized_afd.insert(minimized_state.clone(), transitions);
+        }
+
+        minimized_afd
+    }
+
+    pub fn print_minimized_afd(minimized_afd: HashMap<String, HashMap<char, String>>) {
+        println!("AFD minimizado:");
+
+        // Iterar sobre los estados minimizados
+        for (state, transitions) in minimized_afd {
+            println!("Estado: {}", state);
+
+            // Iterar sobre las transiciones de cada estado
+            for (symbol, next_state) in transitions {
+                println!("  Símbolo: {} -> Estado: {}", symbol, next_state);
+            }
+        }
+    }
 }
 
 fn extract_children(value: &str) -> Option<(String, String)> {
