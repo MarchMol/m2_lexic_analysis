@@ -2,12 +2,13 @@ mod automata; // Importamos el módulo automata.rs
 mod inf_to_pos;
 mod grammar_tree;
 mod direct_afd;
+mod simulation;
 
 use std::rc::Rc;
+use simulation::simulate_afd;
 
 use crate::inf_to_pos::Token;
 use crate::direct_afd::DirectAFD;
-use crate::grammar_tree::Tree;
 
 fn main() {
 
@@ -66,16 +67,21 @@ fn main() {
     let (state_map, acceptance_states) = afd.create_states();
 
     // Imprimir resultados de create states
-    println!("Estado de AFD: ");
-    for (state, transitions) in &state_map {
-        println!("Estado: {}", state);
-        for (column, column_vector) in transitions {
-            println!("  Columna: {}", column);
-            println!("    Valores de followpos: {:?}", column_vector);
-        }
-    }
+    // println!("Estado de AFD: ");
+    // for (state, transitions) in &state_map {
+    //     println!("Estado: {}", state);
+    //     for (column, column_vector) in transitions {
+    //         println!("  Columna: {}", column);
+    //         println!("    Valores de followpos: {:?}", column_vector);
+    //     }
+    // }
+    // println!("\nEstados de aceptación: {:?}", acceptance_states);
 
-    println!("\nEstados de aceptación: {:?}", acceptance_states);
+    // Llamamos a la simulación
+    let input = "abb*";
+    let verificar = simulate_afd(&state_map, &acceptance_states, &input);
+    println!("La simulación dice que este input es: {}", verificar)
+
 }
 
 fn automata_stuff(){

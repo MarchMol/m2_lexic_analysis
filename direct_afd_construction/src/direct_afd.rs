@@ -322,8 +322,8 @@ impl DirectAFD {
         followpos_map
     }
     
-    pub fn create_states(&mut self) -> (HashMap<char, HashMap<char, Vec<String>>>, Vec<char>) {
-        let mut state_map: HashMap<char, HashMap<char, Vec<String>>> = HashMap::new();  // Mapa de estados y sus transiciones
+    pub fn create_states(&mut self) -> (HashMap<char, HashMap<char, char>>, Vec<char>) {
+        let mut state_map: HashMap<char, HashMap<char, char>> = HashMap::new();  // Mapa de estados y sus transiciones
         let mut acceptance_states: Vec<char> = Vec::new();  // Lista de estados de aceptación
         let mut state_queue: HashMap<String, Vec<String>> = HashMap::new();  // Cola de estados por procesar
         let mut visited_states: HashMap<String, Vec<String>> = HashMap::new();  // Para evitar procesar estados duplicados
@@ -355,6 +355,7 @@ impl DirectAFD {
             // Crea los valores de cada columna
             for column in &columns {
                 let mut column_vector: Vec<String> = Vec::new();
+                let mut assigned_letter = None;
                 
                 // Verificar que números en state_value están asociados a la columna
                 for number in &state_value {
@@ -372,9 +373,38 @@ impl DirectAFD {
                 // Si el column_vector tiene elementos, guardamos en state_map
                 if !column_vector.is_empty() {
                     // Verificar si el estado creado ya existe 
-                    if !visited_states.values().any(|v| v == &column_vector) {
+                    if !visited_states.values().any(|v| {
+                        let mut v_sorted = v.clone();
+                        v_sorted.sort();
+                        let mut column_vector_sorted = column_vector.clone();
+                        column_vector_sorted.sort();
+
+                        v_sorted == column_vector_sorted
+                    }) {
                         state_letter = (state_letter as u8 + 1) as char;
                         state_queue.insert(state_letter.to_string(), column_vector.clone());
+                    }
+
+                    // Busca la letra asignada a un estado
+                    if let Some(existing_letter) = visited_states.iter().find_map(|(key, value)| {
+                        if value == &column_vector {
+                            Some(key)
+                        } else {
+                            None
+                        }
+                    }) {
+                        assigned_letter = Some(existing_letter.clone());
+                    }
+                    if assigned_letter.is_none() {
+                        if let Some(existing_letter) = state_queue.iter().find_map(|(key, value)| {
+                            if value == &column_vector {
+                                Some(key)
+                            } else {
+                                None
+                            }
+                        }) {
+                            assigned_letter = Some(existing_letter.clone());
+                        }
                     }
 
                     // Verificar si el estado es de aceptación
@@ -389,12 +419,16 @@ impl DirectAFD {
                     }
 
                     // Insertar o actualizar el valor en state_map
-                    state_map
-                        .entry(state_key.chars().next().unwrap()) // Primer char es state_key
-                        .or_insert_with(HashMap::new)             // Crear el HashMap si no existe
-                        .insert(column.chars().next().unwrap(), column_vector); // Insertar columna y vector
+                    if let Some(assigned_letter) = assigned_letter {
+                        state_map
+                        .entry(state_key.chars().next().unwrap())
+                        .or_insert_with(HashMap::new)
+                        .insert(column.chars().next().unwrap(), assigned_letter.chars().next().unwrap());
+                    }
                 }
                 // println!("Estado actual del visited_states {:?}", visited_states);
+                // println!("Visitando la columna {}", column);
+                // println!("Followpos de la columna: {:?}", column_vector);
                 // println!("Estado actual del state_queue {:?}", state_queue);
                 // println!("Estado actual del acceptance_states {:?}", acceptance_states);
             }
