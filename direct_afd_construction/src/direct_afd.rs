@@ -30,12 +30,13 @@ impl DirectAFD {
     }
 
     // Lee el árbol y guarda sus labels
-    pub fn read_tree(&self) -> HashMap<String, String> {
+    pub fn read_tree(&self) -> (HashMap<String, String>, String) {
         let mut labels = HashMap::new();
         let mut literal_count = 1;
         let mut union_count = 1;
         let mut kleene_count = 1;
         let mut concat_count = 1;
+        let mut root_key = String::new();
     
         // Función recursiva que recorre el árbol y asigna etiquetas
         fn traverse(
@@ -97,14 +98,14 @@ impl DirectAFD {
         // Llamar a la función de recorrido desde la raíz
         if let Some(root_node) = self.syntax_tree.get_root() {
             // Realizamos el recorrido y asignamos las etiquetas
-            traverse(&root_node, &mut labels, &mut literal_count, &mut union_count, &mut kleene_count, &mut concat_count);
+            root_key = traverse(&root_node, &mut labels, &mut literal_count, &mut union_count, &mut kleene_count, &mut concat_count);
         }
     
-        labels
+        (labels, root_key)
     }
 
     pub fn find_nullable(&self) -> HashMap<String, bool> {
-        let tree_map = self.read_tree();
+        let (tree_map, _key) = self.read_tree();
         let mut nullable_map = HashMap::new();
     
         // Primera pasada: inicializar literales y Sentinel
@@ -154,7 +155,7 @@ impl DirectAFD {
     }    
       
     pub fn find_first_last_pos(&self) -> (HashMap<String, Vec<String>>, HashMap<String, Vec<String>>) {
-        let tree_map = self.read_tree();
+        let (tree_map, _key) = self.read_tree();
         let mut firstpos_map: HashMap<String, Vec<String>> = HashMap::new();
         let mut lastpos_map: HashMap<String, Vec<String>> = HashMap::new();
         
@@ -261,7 +262,7 @@ impl DirectAFD {
     }
 
     pub fn find_followpos(&self) -> HashMap<String, Vec<String>> {
-        let tree_map = self.read_tree();
+        let (tree_map, _key) = self.read_tree();
         let mut followpos_map: HashMap<String, Vec<String>> = HashMap::new();
     
         // Obtener firstpos y lastpos con la función existente
@@ -330,12 +331,11 @@ impl DirectAFD {
         let mut state_letter = 'A';
         
         // Obtener el firstpos del nodo raíz
-        let root_node = "gama4";
-        let root_firstpos = self.find_first_last_pos().0.get(root_node).unwrap_or(&Vec::new()).clone();
+        let (mut  labels_map, root_key) = self.read_tree();
+        let root_firstpos = self.find_first_last_pos().0.get(&root_key).unwrap_or(&Vec::new()).clone();
         state_queue.insert(state_letter.to_string(), root_firstpos.clone());
 
         let followpos_map = self.find_followpos();
-        let mut labels_map = self.read_tree();
         labels_map.retain(|key, _| followpos_map.contains_key(key));
         let mut columns: HashSet<String> = HashSet::new();
         for (_key, value) in &labels_map {

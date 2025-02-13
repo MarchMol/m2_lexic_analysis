@@ -32,8 +32,9 @@ fn main() {
     // Asignamos etiquetas a los nodos del árbol
     
     // Asignamos etiquetas a los nodos del árbol
-    let labels = afd.read_tree();
+    let (labels, root_node) = afd.read_tree();
     // println!("Etiquetas de los nodos: {:?}", labels);
+    // println!("Nodo raíz: {}", root_node);
 
     // Calculamos los valores de nulabilidad
     let nullable_map = afd.find_nullable();
@@ -56,8 +57,6 @@ fn main() {
 
     // Calculamos el followpos
     let followpos_map = afd.find_followpos();
-
-    // Imprimimos los resultados de followpos
     // println!("Followpos de los nodos:");
     // for (key, followpos) in &followpos_map {
     //     println!("Nodo: {} => Followpos: {:?}", key, followpos);
@@ -65,8 +64,6 @@ fn main() {
 
     // Hacemos los estados y el AFD
     let (state_map, acceptance_states) = afd.create_states();
-
-    // Imprimir resultados de create states
     // println!("Estado de AFD: ");
     // for (state, transitions) in &state_map {
     //     println!("Estado: {}", state);
@@ -78,7 +75,7 @@ fn main() {
     // println!("\nEstados de aceptación: {:?}", acceptance_states);
 
     // Llamamos a la simulación
-    let input = "abb*";
+    let input = "abb";
     let verificar = simulate_afd(&state_map, &acceptance_states, &input);
     println!("La simulación dice que este input es: {}", verificar)
 
