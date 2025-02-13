@@ -28,75 +28,187 @@ impl DirectAFD {
         self.create_states();
     }
 
-    pub fn read_tree(&self) -> HashMap<String, Token> {
+    // Lee el árbol y guarda sus labels
+    pub fn read_tree(&self) -> HashMap<String, String> {
         let mut labels = HashMap::new();
         let mut literal_count = 1;
         let mut union_count = 1;
         let mut kleene_count = 1;
         let mut concat_count = 1;
     
-        // Función recursiva que recorre el árbol y asigna los valores
-        pub fn traverse(
-            
+        // Función recursiva que recorre el árbol y asigna etiquetas
+        fn traverse(
             node: &TreeNode,
-            labels: &mut HashMap<String, Token>,
+            labels: &mut HashMap<String, String>,
             literal_count: &mut usize,
             union_count: &mut usize,
             kleene_count: &mut usize,
             concat_count: &mut usize,
-        ) {
-            // Primero recorrer el subárbol izquierdo
-            if let Some(left) = node.get_left() {
-                traverse(&left, labels, literal_count, union_count, kleene_count, concat_count);
-            }
+        ) -> String {
+            // Obtener los identificadores de los hijos (si existen)
+            let left_id = node.get_left().map(|left| traverse(&left, labels, literal_count, union_count, kleene_count, concat_count));
+            let right_id = node.get_right().map(|right| traverse(&right, labels, literal_count, union_count, kleene_count, concat_count));
     
-            // Luego recorrer el subárbol derecho
-            if let Some(right) = node.get_right() {
-                traverse(&right, labels, literal_count, union_count, kleene_count, concat_count);
-            }
-    
-            // Asignar etiquetas según el tipo de nodo
-            match node.get_value() {
+            // Asignar identificador al nodo actual
+            let node_id = match node.get_value() {
                 Token::Literal(c) => {
-                    labels.insert(literal_count.to_string(), node.get_value().clone());
+                    let id = literal_count.to_string();
+                    labels.insert(id.clone(), format!("Literal('{}')", c));
                     *literal_count += 1;
+                    id
                 }
                 Token::Union => {
-                    labels.insert(format!("alpha{}", *union_count), node.get_value().clone());
+                    let id = format!("alpha{}", *union_count);
                     *union_count += 1;
+                    if let (Some(c1), Some(c2)) = (left_id.clone(), right_id.clone()) {
+                        labels.insert(id.clone(), format!("({}, {})", c1, c2));
+                    }
+                    id
                 }
                 Token::Kleene => {
-                    labels.insert(format!("beta{}", *kleene_count), node.get_value().clone());
+                    let id = format!("beta{}", *kleene_count);
                     *kleene_count += 1;
+                    if let Some(c1) = left_id.clone() {
+                        labels.insert(id.clone(), format!("({})", c1));
+                    }
+                    id
                 }
                 Token::Concat => {
-                    labels.insert(format!("gama{}", *concat_count), node.get_value().clone());
+                    let id = format!("gama{}", *concat_count);
                     *concat_count += 1;
+                    if let (Some(c1), Some(c2)) = (left_id.clone(), right_id.clone()) {
+                        labels.insert(id.clone(), format!("({}, {})", c1, c2));
+                    }
+                    id
                 }
                 Token::Sentinel => {
-                    labels.insert(literal_count.to_string(), node.get_value().clone());
+                    let id = literal_count.to_string();
+                    labels.insert(id.clone(), "Sentinel".to_string());
                     *literal_count += 1;
+                    id
                 }
                 _ => unreachable!("Unexpected token type in syntax tree"),
-            }
+            };
+    
+            node_id
         }
-        
+    
         // Llamar a la función de recorrido desde la raíz
         if let Some(root_node) = self.syntax_tree.get_root() {
-            
             traverse(&root_node, &mut labels, &mut literal_count, &mut union_count, &mut kleene_count, &mut concat_count);
         }
     
         labels
     }
-     
 
-    fn find_nullable(&mut self) {
-        // Encontrar anulables en el árbol sintáctico
+    pub fn find_nullable(&self) -> HashMap<String, bool> {
+        let tree_map = self.read_tree();
+        let mut nullable_map = HashMap::new();
+    
+        // Primera pasada: inicializar literales y Sentinel
+        for (key, value) in &tree_map {
+            if value.starts_with("Literal") {
+                let content = value.trim_start_matches("Literal('").trim_end_matches("')");
+                nullable_map.insert(key.clone(), content == "ε");
+            } else if value == "Sentinel" {
+                nullable_map.insert(key.clone(), false);
+            }
+        }
+    
+        // Segunda pasada: calcular valores de Kleene, Concat y Union
+        for (key, value) in &tree_map {
+            if key.starts_with("beta") {
+                nullable_map.insert(key.clone(), true);
+            } else if key.starts_with("gama") {
+                if let Some((c1, c2)) = extract_children(value) {
+                    let nullable_c1 = *nullable_map.get(&c1).unwrap_or(&false);
+                    let nullable_c2 = *nullable_map.get(&c2).unwrap_or(&false);
+                    nullable_map.insert(key.clone(), nullable_c1 && nullable_c2);
+                }
+            } else if key.starts_with("alpha") {
+                if let Some((c1, c2)) = extract_children(value) {
+                    let nullable_c1 = *nullable_map.get(&c1).unwrap_or(&false);
+                    let nullable_c2 = *nullable_map.get(&c2).unwrap_or(&false);
+                    nullable_map.insert(key.clone(), nullable_c1 || nullable_c2);
+                }
+            }
+        }
+    
+        nullable_map
     }
-
-    fn find_first_last_pos(&mut self) {
-        // Encontrar firstpos y lastpos de las hojas y transiciones
+      
+    pub fn find_first_last_pos(&self) -> (HashMap<String, Vec<String>>, HashMap<String, Vec<String>>) {
+        let tree_map = self.read_tree(); // Obtener el diccionario de etiquetas
+        let mut firstpos_map: HashMap<String, Vec<String>> = HashMap::new();
+        let mut lastpos_map: HashMap<String, Vec<String>> = HashMap::new();
+        
+        // Primera pasada: Inicializar Literales
+        for (key, value) in &tree_map {
+            if value.starts_with("Literal")|| value.starts_with("Sentinel") {
+                // Para Literals, firstpos y lastpos es solo su propia key
+                firstpos_map.insert(key.clone(), vec![key.clone()]);
+                lastpos_map.insert(key.clone(), vec![key.clone()]);
+            }
+        }
+    
+        // Segunda pasada: Procesar los nodos no Literales
+        for (key, value) in &tree_map {
+            if key.starts_with("beta") {
+                // Kleene (beta): Igualar firstpos y lastpos al nodo al que está conectado
+                if let Some(c1) = extract_single_child(value) {
+                    let firstpos = firstpos_map.get(&c1).cloned().unwrap_or_default();
+                    let lastpos = lastpos_map.get(&c1).cloned().unwrap_or_default();
+                    firstpos_map.insert(key.clone(), firstpos);
+                    lastpos_map.insert(key.clone(), lastpos);
+                }
+            } else if key.starts_with("alpha") {
+                // Union (alpha): Unir firstpos y lastpos de los nodos izquierdo y derecho
+                if let Some((c1, c2)) = extract_children(value) {
+                    let firstpos_c1 = firstpos_map.get(&c1).cloned().unwrap_or_default();
+                    let firstpos_c2 = firstpos_map.get(&c2).cloned().unwrap_or_default();
+                    let lastpos_c1 = lastpos_map.get(&c1).cloned().unwrap_or_default();
+                    let lastpos_c2 = lastpos_map.get(&c2).cloned().unwrap_or_default();
+                    
+                    // Unión de firstpos y lastpos
+                    let firstpos = [&firstpos_c1[..], &firstpos_c2[..]].concat();
+                    let lastpos = [&lastpos_c1[..], &lastpos_c2[..]].concat();
+                    
+                    firstpos_map.insert(key.clone(), firstpos);
+                    lastpos_map.insert(key.clone(), lastpos);
+                }
+            } else if key.starts_with("gama") {
+                // Concat (gama): Verificar nullabilidad para firstpos y lastpos
+                if let Some((c1, c2)) = extract_children(value) {
+                    let firstpos_c1 = firstpos_map.get(&c1).cloned().unwrap_or_default();
+                    let firstpos_c2 = firstpos_map.get(&c2).cloned().unwrap_or_default();
+                    let lastpos_c1 = lastpos_map.get(&c1).cloned().unwrap_or_default();
+                    let lastpos_c2 = lastpos_map.get(&c2).cloned().unwrap_or_default();
+                    
+                    let nullable_c1 = *self.find_nullable().get(&c1).unwrap_or(&false);
+                    let nullable_c2 = *self.find_nullable().get(&c2).unwrap_or(&false);
+                    
+                    // Firstpos: Si el izquierdo es nullable, hacer unión con el derecho
+                    let firstpos = if nullable_c1 {
+                        [&firstpos_c1[..], &firstpos_c2[..]].concat()
+                    } else {
+                        firstpos_c1
+                    };
+                    
+                    // Lastpos: Si el derecho es nullable, hacer unión con el izquierdo
+                    let lastpos = if nullable_c2 {
+                        [&lastpos_c2[..], &lastpos_c1[..]].concat()
+                    } else {
+                        lastpos_c2
+                    };
+    
+                    firstpos_map.insert(key.clone(), firstpos);
+                    lastpos_map.insert(key.clone(), lastpos);
+                }
+            }
+        }
+    
+        // Retornar los dos diccionarios: firstpos_map y lastpos_map
+        (firstpos_map, lastpos_map)
     }
 
     fn find_followpos(&mut self) {
@@ -107,5 +219,20 @@ impl DirectAFD {
         // Poner el firstpos del nodo raíz como primer estado
         // Asociar números con columnas
         // Colocar la unión de los followpos en la transición de dicho símbolo
+    }   
+}
+
+fn extract_children(value: &str) -> Option<(String, String)> {
+    let content = value.trim_start_matches('(').trim_end_matches(')');
+    let parts: Vec<&str> = content.split(", ").collect();
+    if parts.len() == 2 {
+        Some((parts[0].to_string(), parts[1].to_string()))
+    } else {
+        None
     }
+}
+
+fn extract_single_child(value: &str) -> Option<String> {
+    let content = value.trim_start_matches('(').trim_end_matches(')');
+    Some(content.to_string())
 }

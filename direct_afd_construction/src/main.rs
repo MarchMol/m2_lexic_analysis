@@ -26,11 +26,32 @@ fn main() {
     // print!("{}",value);
     let gtree_ref = Rc::new(gtree);
 
+    // Inicializamos el AFD
     let mut afd = DirectAFD::new(gtree_ref);
     // Asignamos etiquetas a los nodos del árbol
     
+    // Asignamos etiquetas a los nodos del árbol
     let labels = afd.read_tree();
     println!("Etiquetas de los nodos: {:?}", labels);
+
+     // Calculamos los valores de nulabilidad
+     let nullable_map = afd.find_nullable();
+    //  println!("Nullable de los nodos: {:?}", nullable_map);
+ 
+     // Calculamos los firstpos y lastpos
+     let (firstpos_map, lastpos_map) = afd.find_first_last_pos();
+     
+     // Imprimimos los resultados de firstpos
+     println!("Firstpos de los nodos:");
+     for (key, firstpos) in firstpos_map {
+         println!("Nodo: {} => Firstpos: {:?}", key, firstpos);
+     }
+ 
+     // Imprimimos los resultados de lastpos
+     println!("Lastpos de los nodos:");
+     for (key, lastpos) in lastpos_map {
+         println!("Nodo: {} => Lastpos: {:?}", key, lastpos);
+     }
 }
 
 fn automata_stuff(){
