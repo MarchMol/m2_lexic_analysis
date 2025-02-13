@@ -3,7 +3,7 @@ mod direct_afd;
 mod grammar_tree;
 mod inf_to_pos;
 mod simulation;
-
+mod view;
 use simulation::simulate_afd;
 use std::rc::Rc;
 
@@ -14,7 +14,7 @@ use std::collections::HashSet;
 
 fn main() {
     // 1. Convertimos la regex a postfix
-    let postfix: Vec<Token> = inf_to_pos::inf_to_pos(r"(a|b)*abb#");
+    let postfix: Vec<Token> = inf_to_pos::inf_to_pos(r"1234#");
 
     // 2. Inicializamos el grammar tree
     let mut gtree = grammar_tree::Tree::new();
@@ -40,9 +40,12 @@ fn main() {
 
     // 8. Generamos los estados y el AFD
     let (state_map, acceptance_states) = afd.create_states();
-
-    // 9. Aplicamos el algoritmo de Hopcroft para minimizar el AFD
-    let partitions = direct_afd::hopcroft_minimize(
+    
+    // Render
+    view::render(&state_map, "afd");
+    
+    // // 9. Aplicamos el algoritmo de Hopcroft para minimizar el AFD
+    let partitions = direct_afd::DirectAFD::hopcroft_minimize(
         &state_map,
         &acceptance_states,
         &afd.find_first_last_pos()
@@ -52,21 +55,13 @@ fn main() {
             .collect::<HashSet<char>>(),
     );
 
-    // 10. Construimos el AFD minimizado
-    let minimized_afd = direct_afd::build_minimized_afd(
-        partitions,
-        &state_map,
-        &afd.find_first_last_pos()
-            .0
-            .keys()
-            .flat_map(|s| s.chars())
-            .collect::<HashSet<char>>(),
-    );
+    // // 10. Construimos el AFD minimizado
 
-    // 11. Imprimimos el AFD minimizado
-    direct_afd::print_minimized_afd(minimized_afd);
 
-    // 12. Simulamos el AFD minimizado con el input "abb"
+    // // 11. Imprimimos el AFD minimizado
+    direct_afd::DirectAFD::print_minimized_afd(minimized_afd);
+
+    // // // 12. Simulamos el AFD minimizado con el input "abb"
     let input = "abb";
     let verificar = simulate_afd(&minimized_afd, &acceptance_states, &input);
     println!("La simulación dice que este input es: {}", verificar);

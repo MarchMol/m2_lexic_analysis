@@ -67,13 +67,13 @@ pub fn generate_graph(ginfo: &HashMap<char, HashMap<char, char>>, states: &Vec<S
     graph
 }
 
-pub fn render(ginfo: &HashMap<char, HashMap<char, char>>) {
+pub fn render(ginfo: &HashMap<char, HashMap<char, char>>, dest: &str) {
     let all_states = get_all_states(&ginfo);
     let graph =generate_graph(ginfo, &all_states);
 
     let dot_output = format!("{}", Dot::with_config(&graph, &[]));
     let dot_file = "graph.dot";
-    let png_file = "graph.png";
+    let png_file = &format!("{}.png", dest);
     let mut file = File::create(dot_file).expect("Failed to create .dot file");
     file.write_all(dot_output.as_bytes())
         .expect("Failed to write to .dot file");
