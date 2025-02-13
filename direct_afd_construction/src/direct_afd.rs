@@ -1,5 +1,6 @@
 use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
+
 use crate::grammar_tree::{Tree, TreeNode};
 use crate::inf_to_pos::Token;
 
@@ -95,6 +96,7 @@ impl DirectAFD {
     
         // Llamar a la función de recorrido desde la raíz
         if let Some(root_node) = self.syntax_tree.get_root() {
+            // Realizamos el recorrido y asignamos las etiquetas
             traverse(&root_node, &mut labels, &mut literal_count, &mut union_count, &mut kleene_count, &mut concat_count);
         }
     
@@ -320,9 +322,87 @@ impl DirectAFD {
         followpos_map
     }
     
-    pub fn create_states(&self) {
+    pub fn create_states(&mut self) -> (HashMap<char, HashMap<char, Vec<String>>>, Vec<char>) {
+        let mut state_map: HashMap<char, HashMap<char, Vec<String>>> = HashMap::new();  // Mapa de estados y sus transiciones
+        let mut acceptance_states: Vec<char> = Vec::new();  // Lista de estados de aceptación
+        let mut state_queue: HashMap<String, Vec<String>> = HashMap::new();  // Cola de estados por procesar
+        let mut visited_states: HashMap<String, Vec<String>> = HashMap::new();  // Para evitar procesar estados duplicados
+        let mut state_letter = 'A';
         
-    }    
+        // Obtener el firstpos del nodo raíz
+        let root_node = "gama4";
+        let root_firstpos = self.find_first_last_pos().0.get(root_node).unwrap_or(&Vec::new()).clone();
+        state_queue.insert(state_letter.to_string(), root_firstpos.clone());
+
+        let followpos_map = self.find_followpos();
+        let mut labels_map = self.read_tree();
+        labels_map.retain(|key, _| followpos_map.contains_key(key));
+        let mut columns: HashSet<String> = HashSet::new();
+        for (_key, value) in &labels_map {
+                if value.starts_with("Literal") {
+                    if let Some(c) = value.chars().nth(9) {
+                    columns.insert(c.to_string());  // Insertar el valor extraído en el HashSet
+                }
+            }
+        }
+
+        while !state_queue.is_empty() {
+            // Obtener el primer estado y removerlo de state_queue
+            let (state_key, state_value) = state_queue.drain().next().unwrap();
+            // Agregar el estado a visited_states
+            visited_states.insert(state_key.clone(), state_value.clone());
+        
+            // Crea los valores de cada columna
+            for column in &columns {
+                let mut column_vector: Vec<String> = Vec::new();
+                
+                // Verificar que números en state_value están asociados a la columna
+                for number in &state_value {
+                    if let Some(symbol) = labels_map.get(number) {
+                        if let Some(c) = symbol.chars().nth(9) {
+                            if c.to_string() == *column {
+                                if let Some(followpos_values) = followpos_map.get(number) {
+                                    column_vector.extend(followpos_values.clone());
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Si el column_vector tiene elementos, guardamos en state_map
+                if !column_vector.is_empty() {
+                    // Verificar si el estado creado ya existe 
+                    if !visited_states.values().any(|v| v == &column_vector) {
+                        state_letter = (state_letter as u8 + 1) as char;
+                        state_queue.insert(state_letter.to_string(), column_vector.clone());
+                    }
+
+                    // Verificar si el estado es de aceptación
+                    if column_vector.iter().any(|num| {
+                        if let Some(symbol) = labels_map.get(num) {
+                            symbol.starts_with("Sentinel")
+                        } else {
+                            false
+                        }
+                    }) {
+                        acceptance_states.push(state_letter);
+                    }
+
+                    // Insertar o actualizar el valor en state_map
+                    state_map
+                        .entry(state_key.chars().next().unwrap()) // Primer char es state_key
+                        .or_insert_with(HashMap::new)             // Crear el HashMap si no existe
+                        .insert(column.chars().next().unwrap(), column_vector); // Insertar columna y vector
+                }
+                // println!("Estado actual del visited_states {:?}", visited_states);
+                // println!("Estado actual del state_queue {:?}", state_queue);
+                // println!("Estado actual del acceptance_states {:?}", acceptance_states);
+            }
+            
+        }
+
+        (state_map, acceptance_states)
+    } 
 }
 
 fn extract_children(value: &str) -> Option<(String, String)> {

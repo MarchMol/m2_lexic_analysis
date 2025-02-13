@@ -57,10 +57,25 @@ fn main() {
     let followpos_map = afd.find_followpos();
 
     // Imprimimos los resultados de followpos
-    println!("Followpos de los nodos:");
-    for (key, followpos) in &followpos_map {
-        println!("Nodo: {} => Followpos: {:?}", key, followpos);
+    // println!("Followpos de los nodos:");
+    // for (key, followpos) in &followpos_map {
+    //     println!("Nodo: {} => Followpos: {:?}", key, followpos);
+    // }
+
+    // Hacemos los estados y el AFD
+    let (state_map, acceptance_states) = afd.create_states();
+
+    // Imprimir resultados de create states
+    println!("Estado de AFD: ");
+    for (state, transitions) in &state_map {
+        println!("Estado: {}", state);
+        for (column, column_vector) in transitions {
+            println!("  Columna: {}", column);
+            println!("    Valores de followpos: {:?}", column_vector);
+        }
     }
+
+    println!("\nEstados de aceptación: {:?}", acceptance_states);
 }
 
 fn automata_stuff(){
