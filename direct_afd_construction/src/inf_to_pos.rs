@@ -16,6 +16,7 @@ pub enum Token {
     LParen,            // (
     RParen,            // )
     Sentinel,          // #
+    Empty           // % 
 }
 
 fn tokenize(input: &str) -> Vec<Token> {
@@ -28,6 +29,7 @@ fn tokenize(input: &str) -> Vec<Token> {
                     tokens.push(Token::Literal(next_c))
                 }
             },
+            '%' => tokens.push(Token::Empty),
             '#' => tokens.push(Token::Sentinel),
             '*' => tokens.push(Token::Kleene),
             '|' => tokens.push(Token::Union),
@@ -66,13 +68,13 @@ fn implicit_concat(prev: &Token, next: &Token) -> bool {
     matches!(
         (prev, next),
         (
-            Token::Literal(_) | Token::Range(_, _) | Token::Sentinel,
-            Token::Literal(_) | Token::Range(_, _) | Token::Sentinel
+            Token::Literal(_) | Token::Range(_, _) | Token::Sentinel | Token::Empty,
+            Token::Literal(_) | Token::Range(_, _) | Token::Sentinel | Token::Empty
         ) | (Token::Literal(_) | Token::Range(_, _), Token::LParen)
-            | (Token::RParen, Token::Literal(_) | Token::Range(_, _) | Token::Sentinel)
+            | (Token::RParen, Token::Literal(_) | Token::Range(_, _) | Token::Sentinel | Token::Empty)
             | (
                 Token::Kleene | Token::Plus,
-                Token::Literal(_) | Token::Range(_, _) | Token::Sentinel
+                Token::Literal(_) | Token::Range(_, _) | Token::Sentinel | Token::Empty
             )
             | (Token::Kleene | Token::Plus, Token::LParen)
             | (Token::RParen, Token::LParen)
@@ -96,7 +98,7 @@ fn shunting_yard(tokens: Vec<Token>)->VecDeque<Token>{
             Token::Literal(c) | Token::Range(c, _) => {
                 queue.push_back(tk);
             },
-            Token::LParen =>{
+            Token::LParen | Token::Empty=>{
                 stack.push(tk);
             }
             Token::RParen =>{
@@ -142,7 +144,8 @@ fn shunting_yard(tokens: Vec<Token>)->VecDeque<Token>{
     queue
 }
 pub fn inf_to_pos(input: &str) ->Vec<Token>{
-    let tokens = tokenize(input);
+    let fixed_input = format!("({})#",input);
+    let tokens = tokenize(&fixed_input);
     let posttoks = shunting_yard(tokens);
     Vec::from(posttoks)
 

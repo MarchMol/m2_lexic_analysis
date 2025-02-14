@@ -60,7 +60,7 @@ impl Tree{
 
         for tk in tokens{
             match tk{
-                Token::Literal(c) | Token::Range(c,_)=>{
+                Token::Literal(c) | Token::Range(c,_) =>{
                     let newnode = TreeNode{
                         value: tk, 
                         left: None,
@@ -95,7 +95,7 @@ impl Tree{
                         _=>{}
                     }
                 },
-                Token::Sentinel=>{
+                Token::Sentinel | Token::Empty=>{
                     let newnode = TreeNode{
                         value: tk, 
                         left: None,

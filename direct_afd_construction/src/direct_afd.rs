@@ -1,3 +1,4 @@
+use std::clone;
 use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
 
@@ -360,7 +361,7 @@ impl DirectAFD {
         let mut state_queue: HashMap<String, Vec<String>> = HashMap::new(); // Cola de estados por procesar
         let mut visited_states: HashMap<String, Vec<String>> = HashMap::new(); // Para evitar procesar estados duplicados
         let mut state_letter = 'A';
-
+        
         // Obtener el firstpos del nodo raíz
         let (mut labels_map, root_key) = self.read_tree();
         let root_firstpos = self
@@ -369,10 +370,13 @@ impl DirectAFD {
             .get(&root_key)
             .unwrap_or(&Vec::new())
             .clone();
+        
         state_queue.insert(state_letter.to_string(), root_firstpos.clone());
-
+        
         let followpos_map = self.find_followpos();
+       
         labels_map.retain(|key, _| followpos_map.contains_key(key));
+        
         let mut columns: HashSet<String> = HashSet::new();
         for (_key, value) in &labels_map {
             if value.starts_with("Literal") {
@@ -381,13 +385,12 @@ impl DirectAFD {
                 }
             }
         }
-
+        
         while !state_queue.is_empty() {
             // Obtener el primer estado y removerlo de state_queue
             let (state_key, state_value) = state_queue.drain().next().unwrap();
             // Agregar el estado a visited_states
             visited_states.insert(state_key.clone(), state_value.clone());
-
             // Crea los valores de cada columna
             for column in &columns {
                 let mut column_vector: Vec<String> = Vec::new();
@@ -399,17 +402,22 @@ impl DirectAFD {
                         if let Some(c) = symbol.chars().nth(9) {
                             if c.to_string() == *column {
                                 if let Some(followpos_values) = followpos_map.get(number) {
-                                    column_vector.extend(followpos_values.clone());
+                                    let mut set: HashSet<_> = column_vector.iter().cloned().collect();
+                                    for val in followpos_values {
+                                        if set.insert(val.clone()) { // insert() returns false if the value already exists
+                                            column_vector.push(val.to_string());
+                                        }
+                                    }
                                 }
                             }
                         }
                     }
                 }
-
                 // Si el column_vector tiene elementos, guardamos en state_map
                 if !column_vector.is_empty() {
                     // Verificar si el estado creado ya existe
-                    if !visited_states.values().any(|v| {
+                    if !visited_states.values().any(|v: &Vec<String>| {
+                        
                         let mut v_sorted = v.clone();
                         v_sorted.sort();
                         let mut column_vector_sorted = column_vector.clone();
@@ -418,6 +426,7 @@ impl DirectAFD {
                         v_sorted == column_vector_sorted
                     }) {
                         state_letter = (state_letter as u8 + 1) as char;
+                        println!("column vector: {:?}",column_vector);
                         state_queue.insert(state_letter.to_string(), column_vector.clone());
                     }
 
