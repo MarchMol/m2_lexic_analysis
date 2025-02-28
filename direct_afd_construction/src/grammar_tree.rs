@@ -14,12 +14,12 @@ pub struct TreeNode{
     right: Option<Rc<TreeNode>>
 }
 impl TreeNode{
-    pub fn printTree(self, level: usize, prefix: &str)->String{
+    pub fn print_tree(self, level: usize, prefix: &str)->String{
         let space = " ".repeat(level*4);
         let mut ret = format!("{}{}{:?}\n",space,prefix,self.value);
         match self.left{
             Some(left)=>{
-                let lret = (*left).clone().printTree(level+1, "L----");
+                let lret = (*left).clone().print_tree(level+1, "L----");
                 ret+=&lret;
             }
             _=>{
@@ -27,12 +27,11 @@ impl TreeNode{
         }
         match self.right {
             Some(right)=>{
-                let rret = (*right).clone().printTree(level+1,"R----");
+                let rret = (*right).clone().print_tree(level+1,"R----");
                 ret+=&rret;
             }
             _=>{
             }
-            
         }
         ret
     }
@@ -60,7 +59,7 @@ impl Tree{
 
         for tk in tokens{
             match tk{
-                Token::Literal(c) | Token::Range(c,_) =>{
+                Token::Literal(c) | Token::Range(c,_)=>{
                     let newnode = TreeNode{
                         value: tk, 
                         left: None,
@@ -82,7 +81,7 @@ impl Tree{
                     }
 
                 },
-                (Token::Kleene | Token::Union)=>{
+                Token::Kleene=>{
                     match stack.pop(){
                         Some(first)=>{
                             let operator = TreeNode{
