@@ -1,4 +1,3 @@
-mod automata; // Importamos el módulo automata.rs
 mod direct_afd;
 mod grammar_tree;
 mod inf_to_pos;
@@ -44,18 +43,22 @@ fn convert_minimized_afd_to_original(
     original_afd
 }
 
+
 fn main() {
     // 1. Convertimos la regex a postfix
-    let postfix: Vec<Token> = inf_to_pos::inf_to_pos(r"(a\*b)*|c");
+    let postfix: Vec<Token> = inf_to_pos::inf_to_pos(r"abc(d|e)*f?");
     println!("{:?}",postfix);
-    // // 2. Inicializamos el grammar tree
+    // 2. Inicializamos el grammar tree
     let mut gtree = grammar_tree::Tree::new();
-    // Generamos el árbol a partir de la postfix
-    let mut root = gtree.generate(postfix);
-    let tree_Str = (*root).clone().printTree(0, "root");
-    // println!("{}",tree_Str);
+    let root = gtree.generate(postfix);
+    let tree_str = (*root).clone().print_tree(0, "root\n");
+    println!("{}",tree_str);
     let gtree_ref = Rc::new(gtree);
     
+
+    // Problema 1: no sopora rangos
+    // Problema 2: que implemente la libreria de grafos
+    // Problema 3: a veces da un resultado y a veces otro
 
     // // 3. Inicializamos el AFD
     let mut afd = DirectAFD::new(gtree_ref);
@@ -79,31 +82,30 @@ fn main() {
     view::render(&state_map, &acceptance_states,"afd");
 
     // // 9. Aplicamos el algoritmo de Hopcroft para minimizar el AFD
-    let partitions = direct_afd::DirectAFD::hopcroft_minimize(
-        &state_map, // Esto ahora debe ser de tipo HashMap<char, HashMap<char, Vec<String>>>
-        &acceptance_states,
-    );
+    // let partitions = direct_afd::DirectAFD::hopcroft_minimize(
+    //     &state_map, // Esto ahora debe ser de tipo HashMap<char, HashMap<char, Vec<String>>>
+    //     &acceptance_states,
+    // );
 
-    // // 10. Construimos el AFD minimizado
-    let (minimized_afd, partition_to_state) = direct_afd::DirectAFD::build_minimized_afd(
-        partitions,
-        &state_map,
-        &afd.find_first_last_pos()
-            .0
-            .keys()
-            .flat_map(|s| s.chars())
-            .collect::<HashSet<char>>(),
-    );
+    // // // 10. Construimos el AFD minimizado
+    // let (minimized_afd, partition_to_state) = direct_afd::DirectAFD::build_minimized_afd(
+    //     partitions,
+    //     &state_map,
+    //     &afd.find_first_last_pos()
+    //         .0
+    //         .keys()
+    //         .flat_map(|s| s.chars())
+    //         .collect::<HashSet<char>>(),
+    // );
 
 
-    // // 11. Imprimimos el AFD minimizado
-    direct_afd::DirectAFD::print_minimized_afd(&minimized_afd); // Pasamos una referencia aquí
+    // // // 11. Imprimimos el AFD minimizado
+    // direct_afd::DirectAFD::print_minimized_afd(&minimized_afd); // Pasamos una referencia aquí
 
-    // // 12. Convertimos el AFD minimizado al formato esperado por simulate_afd
-    let original_afd = convert_minimized_afd_to_original(&minimized_afd);
+    // // // 12. Convertimos el AFD minimizado al formato esperado por simulate_afd
 
-    // // 13. Simulamos el AFD minimizado con el input "abb"
-    let input = "c";
-    let verificar = simulate_afd(&original_afd, &acceptance_states, &input);
-    println!("La simulación dice que este input es: {}", verificar);
+    // // // 13. Simulamos el AFD minimizado con el input "abb"
+    // let input = "b*a";
+    // let verificar = simulate_afd(&state_map, &acceptance_states, &input);
+    // println!("La simulación dice que este input es: {}", verificar);
 }

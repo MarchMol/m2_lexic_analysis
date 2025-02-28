@@ -78,6 +78,12 @@ impl DirectAFD {
                     *literal_count += 1;
                     id
                 }
+                Token::Range(c,d) => {
+                    let id = literal_count.to_string();
+                    labels.insert(id.clone(), format!("Range('{},{}')", c,d));
+                    *literal_count += 1;
+                    id
+                }
                 Token::Union => {
                     let id = format!("alpha{}", *union_count);
                     *union_count += 1;
@@ -106,6 +112,11 @@ impl DirectAFD {
                     let id = literal_count.to_string();
                     labels.insert(id.clone(), "Sentinel".to_string());
                     *literal_count += 1;
+                    id
+                }
+                Token::Empty=>{
+                    let id = "Emtpy".to_string();
+                    labels.insert(id.clone(), "Empty".to_string());
                     id
                 }
                 _ => unreachable!("Unexpected token type in syntax tree"),
@@ -137,10 +148,11 @@ impl DirectAFD {
         // Primera pasada: inicializar literales y Sentinel
         for (key, value) in &tree_map {
             if value.starts_with("Literal") {
-                let content = value.trim_start_matches("Literal('").trim_end_matches("')");
-                nullable_map.insert(key.clone(), content == "ε");
+                nullable_map.insert(key.clone(), false);
             } else if value == "Sentinel" {
                 nullable_map.insert(key.clone(), false);
+            } else if value=="Empty" {
+                nullable_map.insert(key.clone(), true);
             }
         }
 
@@ -163,6 +175,7 @@ impl DirectAFD {
                         nullable_map.insert(key.clone(), nullable_c1 && nullable_c2);
                     }
                 } else if key.starts_with("alpha") {
+                    // Union, si un hijo es nullable
                     if let Some((c1, c2)) = extract_children(value) {
                         let nullable_c1 = *nullable_map.get(&c1).unwrap_or(&false);
                         let nullable_c2 = *nullable_map.get(&c2).unwrap_or(&false);
@@ -507,7 +520,7 @@ impl DirectAFD {
 
         partitions.insert("accept".to_string(), accept_states);
         partitions.insert("reject".to_string(), reject_states);
-
+        println!("particiones {:?}",partitions);
         println!("Particiones iniciales:");
         for (key, value) in &partitions {
             println!("{}: {:?}", key, value);
@@ -554,7 +567,8 @@ impl DirectAFD {
             }
 
             for (key, value) in &new_partitions {}
-
+            println!("Old {:?}",partitions);
+            println!("New {:?}",new_partitions);
             if new_partitions != partitions {
                 stable = false;
                 partitions = new_partitions;
