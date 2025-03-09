@@ -78,9 +78,9 @@ impl DirectAFD {
                     *literal_count += 1;
                     id
                 }
-                Token::Range(c,d) => {
+                Token::Range(c, d) => {
                     let id = literal_count.to_string();
-                    labels.insert(id.clone(), format!("Range('{},{}')", c,d));
+                    labels.insert(id.clone(), format!("Range('{},{}')", c, d));
                     *literal_count += 1;
                     id
                 }
@@ -114,7 +114,7 @@ impl DirectAFD {
                     *literal_count += 1;
                     id
                 }
-                Token::Empty=>{
+                Token::Empty => {
                     let id = "Emtpy".to_string();
                     labels.insert(id.clone(), "Empty".to_string());
                     id
@@ -151,7 +151,7 @@ impl DirectAFD {
                 nullable_map.insert(key.clone(), false);
             } else if value == "Sentinel" {
                 nullable_map.insert(key.clone(), false);
-            } else if value=="Empty" {
+            } else if value == "Empty" {
                 nullable_map.insert(key.clone(), true);
             }
         }
@@ -301,6 +301,9 @@ impl DirectAFD {
         }
 
         // Retornar los dos diccionarios: firstpos_map y lastpos_map
+        println!("\n===== RESULTADO FINAL =====");
+        // println!("Particiones minimizadas: {:?}", partitions);
+
         (firstpos_map, lastpos_map)
     }
 
@@ -374,7 +377,7 @@ impl DirectAFD {
         let mut state_queue: HashMap<String, Vec<String>> = HashMap::new(); // Cola de estados por procesar
         let mut visited_states: HashMap<String, Vec<String>> = HashMap::new(); // Para evitar procesar estados duplicados
         let mut state_letter = 'A';
-        
+
         // Obtener el firstpos del nodo raíz
         let (mut labels_map, root_key) = self.read_tree();
         let root_firstpos = self
@@ -383,13 +386,13 @@ impl DirectAFD {
             .get(&root_key)
             .unwrap_or(&Vec::new())
             .clone();
-        
+
         state_queue.insert(state_letter.to_string(), root_firstpos.clone());
-        
+
         let followpos_map = self.find_followpos();
-       
+
         labels_map.retain(|key, _| followpos_map.contains_key(key));
-        
+
         let mut columns: HashSet<String> = HashSet::new();
         for (_key, value) in &labels_map {
             if value.starts_with("Literal") {
@@ -398,7 +401,9 @@ impl DirectAFD {
                 }
             }
         }
-        
+        println!("\n===== INICIO DE MINIMIZACIÓN =====");
+        // println!("Particiones iniciales: {:?}", partitions);
+
         while !state_queue.is_empty() {
             // Obtener el primer estado y removerlo de state_queue
             let (state_key, state_value) = state_queue.drain().next().unwrap();
@@ -415,9 +420,11 @@ impl DirectAFD {
                         if let Some(c) = symbol.chars().nth(9) {
                             if c.to_string() == *column {
                                 if let Some(followpos_values) = followpos_map.get(number) {
-                                    let mut set: HashSet<_> = column_vector.iter().cloned().collect();
+                                    let mut set: HashSet<_> =
+                                        column_vector.iter().cloned().collect();
                                     for val in followpos_values {
-                                        if set.insert(val.clone()) { // insert() returns false if the value already exists
+                                        if set.insert(val.clone()) {
+                                            // insert() returns false if the value already exists
                                             column_vector.push(val.to_string());
                                         }
                                     }
@@ -430,7 +437,6 @@ impl DirectAFD {
                 if !column_vector.is_empty() {
                     // Verificar si el estado creado ya existe
                     if !visited_states.values().any(|v: &Vec<String>| {
-                        
                         let mut v_sorted = v.clone();
                         v_sorted.sort();
                         let mut column_vector_sorted = column_vector.clone();
@@ -439,7 +445,7 @@ impl DirectAFD {
                         v_sorted == column_vector_sorted
                     }) {
                         state_letter = (state_letter as u8 + 1) as char;
-                        println!("column vector: {:?}",column_vector);
+                        println!("column vector: {:?}", column_vector);
                         state_queue.insert(state_letter.to_string(), column_vector.clone());
                     }
 
@@ -506,129 +512,82 @@ impl DirectAFD {
     ) -> HashMap<String, Vec<String>> {
         let mut partitions: HashMap<String, Vec<String>> = HashMap::new();
 
-        // Partición inicial: aceptación vs no aceptación
-        let mut accept_states: Vec<String> = Vec::new();
-        for state in acceptance_states {
-            accept_states.push(state.to_string());
-        }
-        let mut reject_states: Vec<String> = Vec::new();
-        for state in state_map.keys() {
-            if !accept_states.contains(&state.to_string()) {
-                reject_states.push(state.to_string());
-            }
-        }
+        // Separar estados de aceptación y rechazo
+        let accept_states: Vec<String> = acceptance_states.iter().map(|s| s.to_string()).collect();
+        let reject_states: Vec<String> = state_map
+            .keys()
+            .filter(|s| !acceptance_states.contains(s))
+            .map(|s| s.to_string())
+            .collect();
 
         partitions.insert("accept".to_string(), accept_states);
         partitions.insert("reject".to_string(), reject_states);
-        println!("particiones {:?}",partitions);
-        println!("Particiones iniciales:");
-        for (key, value) in &partitions {
-            println!("{}: {:?}", key, value);
+
+        println!("\n===== Particiones Iniciales =====");
+        for (key, states) in &partitions {
+            println!("{} -> {:?}", key, states);
         }
 
         let mut stable = false;
         while !stable {
             stable = true;
+            println!("\n===== Iteración de refinamiento =====");
+            println!("Particiones actuales: {:?}", partitions);
+
             let mut new_partitions: HashMap<String, Vec<String>> = HashMap::new();
 
-            for (partition_key, partition_states) in partitions.iter() {
-                let mut transition_map: HashMap<char, Vec<String>> = HashMap::new();
+            for (partition_key, partition_states) in &partitions {
+                let mut transition_map: HashMap<Vec<String>, Vec<String>> = HashMap::new();
 
-                // Para cada estado de la partición, obtenemos sus transiciones
                 for state in partition_states {
+                    let mut signature: Vec<String> = Vec::new();
                     if let Some(transitions) = state_map.get(&state.chars().next().unwrap()) {
                         for (symbol, next_state) in transitions {
-                            transition_map
-                                .entry(*symbol)
-                                .or_insert_with(Vec::new)
-                                .push(next_state.to_string());
+                            signature.push(format!("{}->{}", symbol, next_state));
                         }
                     }
+                    signature.sort();
+                    transition_map
+                        .entry(signature.clone())
+                        .or_insert_with(Vec::new)
+                        .push(state.clone());
+
+                    println!(
+                        "Estado '{}' con transiciones {:?} -> Grupo {:?}",
+                        state, signature, transition_map
+                    );
                 }
 
-                for (symbol, grouped_states) in &transition_map {
-                    println!("  Símbolo: {} -> Estados: {:?}", symbol, grouped_states);
-                }
-
-                // Si no hay transiciones para esta partición, la copiamos tal cual
-                if transition_map.is_empty() {
-                    new_partitions.insert(partition_key.clone(), partition_states.clone());
-                } else {
-                    // Agrupar los estados en nuevas subparticiones según sus transiciones
-                    for (symbol, mut grouped_states) in transition_map {
-                        grouped_states.sort();
-                        let group_key = format!("{:?}", grouped_states);
-                        new_partitions
-                            .entry(group_key)
-                            .or_insert_with(Vec::new)
-                            .extend(grouped_states);
-                    }
+                for (sig, grouped_states) in transition_map {
+                    let group_key = format!("{:?}", sig);
+                    new_partitions
+                        .entry(group_key.clone())
+                        .or_insert_with(Vec::new)
+                        .extend(grouped_states);
+                    println!(
+                        "Nueva subpartición '{}' -> {:?}",
+                        group_key, new_partitions[&group_key]
+                    );
                 }
             }
 
-            for (key, value) in &new_partitions {}
-            println!("Old {:?}",partitions);
-            println!("New {:?}",new_partitions);
+            println!(
+                "\nNuevas particiones después de refinamiento: {:?}",
+                new_partitions
+            );
+
             if new_partitions != partitions {
                 stable = false;
                 partitions = new_partitions;
             }
         }
 
-        for (key, value) in &partitions {}
-
-        partitions
-    }
-
-    pub fn refine_partitions(
-        partitions: &mut HashMap<String, Vec<String>>, // Particiones actuales
-        state_map: &HashMap<char, HashMap<char, Vec<String>>>, // Mapa de transiciones
-        symbols: &HashSet<char>,                       // Símbolos de entrada
-    ) {
-        let mut new_partitions: HashMap<String, Vec<String>> = HashMap::new();
-
-        // Depuración: Verificar particiones antes de la refinación
-        for (key, value) in partitions.iter() {}
-
-        // Para cada partición, vamos a verificar las transiciones
-        for (partition_key, partition_states) in partitions.iter() {
-            let mut transition_map: HashMap<char, Vec<String>> = HashMap::new();
-
-            // Para cada estado en la partición, verificamos su transición bajo cada símbolo
-            for state in partition_states {
-                if let Some(transitions) = state_map.get(&state.chars().next().unwrap()) {
-                    for symbol in symbols {
-                        if let Some(next_states) = transitions.get(symbol) {
-                            // Asignar el estado de transición a la subpartición correcta
-                            for next_state in next_states {
-                                transition_map
-                                    .entry(*symbol)
-                                    .or_insert_with(Vec::new)
-                                    .push(next_state.clone());
-                            }
-                        }
-                    }
-                }
-            }
-
-            // Depuración: Verificar las transiciones de los estados en cada partición
-            for (symbol, grouped_states) in &transition_map {}
-
-            // Agrupar los estados en nuevas subparticiones según sus transiciones
-            for (symbol, grouped_states) in transition_map {
-                let group_key = format!("{:?}", grouped_states);
-                new_partitions
-                    .entry(group_key)
-                    .or_insert_with(Vec::new)
-                    .extend(grouped_states);
-            }
+        println!("\n===== Particiones Finales =====");
+        for (key, states) in &partitions {
+            println!("{} -> {:?}", key, states);
         }
 
-        // Depuración: Verificar las particiones refinadas
-        for (key, value) in &new_partitions {}
-
-        // Actualizar las particiones con las nuevas subparticiones
-        *partitions = new_partitions;
+        partitions
     }
 
     pub fn build_minimized_afd(
@@ -641,43 +600,53 @@ impl DirectAFD {
     ) {
         let mut minimized_afd: HashMap<String, HashMap<char, String>> = HashMap::new();
         let mut partition_to_state: HashMap<String, String> = HashMap::new();
-
+        let mut state_to_partition: HashMap<char, String> = HashMap::new();
         let mut new_state_id = 'A';
 
-        // Asignamos un estado minimizado a cada partición usando la clave de la partición
-        for (partition_key, _) in &partitions {
+        println!("\n===== Construcción del AFD Minimizado =====");
+
+        // **1️⃣ Asignamos un nuevo estado a cada partición minimizada**
+        for (partition_key, states) in &partitions {
             partition_to_state.insert(partition_key.clone(), new_state_id.to_string());
             new_state_id = (new_state_id as u8 + 1) as char;
-        }
 
-        // Crear un mapeo de cada estado individual a su partición (clave de partición)
-        let mut state_to_partition: HashMap<char, String> = HashMap::new();
-        for (part_key, states) in &partitions {
             for state in states {
                 let state_char = state.chars().next().unwrap();
-                state_to_partition.insert(state_char, part_key.clone());
+                state_to_partition.insert(state_char, partition_key.clone());
             }
         }
 
-        // Asignar las transiciones para cada partición
+        // **2️⃣ Construimos las transiciones del AFD Minimizado**
         for (partition_key, partition_states) in &partitions {
-            let minimized_state = partition_to_state.get(partition_key).unwrap();
+            let minimized_state = partition_to_state
+                .get(partition_key)
+                .expect("❌ ERROR: No se encontró la partición en partition_to_state")
+                .clone();
+
             let mut transitions: HashMap<char, String> = HashMap::new();
 
-            // Recorremos cada estado de la partición y sus transiciones
             for state in partition_states {
                 let state_char = state.chars().next().unwrap();
 
                 if let Some(transitions_for_state) = state_map.get(&state_char) {
                     for symbol in symbols {
                         if let Some(next_state) = transitions_for_state.get(symbol) {
-                            // Usamos el mapeo state_to_partition para obtener la partición del siguiente estado
                             if let Some(next_partition_key) = state_to_partition.get(next_state) {
                                 if let Some(minimized_next_state) =
                                     partition_to_state.get(next_partition_key)
                                 {
                                     transitions.insert(*symbol, minimized_next_state.clone());
+                                } else {
+                                    println!(
+                                        "❌ ERROR: Estado destino '{}' no encontrado en partition_to_state",
+                                        next_partition_key
+                                    );
                                 }
+                            } else {
+                                println!(
+                                    "❌ ERROR: No hay mapeo en state_to_partition para estado '{}'",
+                                    next_state
+                                );
                             }
                         }
                     }
@@ -687,19 +656,25 @@ impl DirectAFD {
             minimized_afd.insert(minimized_state.clone(), transitions);
         }
 
-        // Depuración: Imprimir el AFD minimizado resultante
+        println!("\n===== AFD Minimizado Construido =====");
         for (state, transitions) in &minimized_afd {
-            for (symbol, next_state) in transitions {}
+            println!("Estado: {}", state);
+            for (symbol, next_state) in transitions {
+                println!("  '{}' -> {}", symbol, next_state);
+            }
         }
+        println!("==========================================");
 
         (minimized_afd, partition_to_state)
     }
 
     pub fn print_minimized_afd(minimized_afd: &HashMap<String, HashMap<char, String>>) {
-        // Iterar sobre los estados minimizados
+        println!("\n===== AFD Minimizado =====");
         for (state, transitions) in minimized_afd {
-            // Iterar sobre las transiciones de cada estado
-            for (symbol, next_state) in transitions {}
+            println!("Estado: {}", state);
+            for (symbol, next_state) in transitions {
+                println!("  '{}' -> {}", symbol, next_state);
+            }
         }
     }
 }

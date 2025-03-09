@@ -1,14 +1,16 @@
 digraph {
-    0 [peripheries=2,  label = "E" ]
-    1 [ label = "B" ]
+    0 [peripheries=2,  label = "D" ]
+    1 [peripheries=2, peripheries=2,  label = "F" ]
     2 [ label = "A" ]
-    3 [peripheries=2,  label = "C" ]
-    4 [ label = "D" ]
-    0 -> 1 [ label = "a" ]
-    1 -> 4 [ label = "*" ]
-    2 -> 3 [ label = "c" ]
-    2 -> 1 [ label = "a" ]
-    4 -> 0 [ label = "b" ]
+    3 [ label = "E" ]
+    4 [ label = "C" ]
+    5 [peripheries=2,  label = "B" ]
+    0 -> 0 [ label = "e" ]
+    0 -> 1 [ label = "f" ]
+    2 -> 3 [ label = "b" ]
+    2 -> 0 [ label = "e" ]
+    2 -> 4 [ label = "a" ]
+    2 -> 5 [ label = "f" ]
 "" [style=invisible, width=0, height=0];
 "" -> 2;
 }
