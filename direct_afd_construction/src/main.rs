@@ -45,7 +45,7 @@ fn convert_minimized_afd_to_original(
 
 fn main() {
     // 1. Convertimos la regex a postfix (a|b)*c(d|e)+f?
-    let postfix: Vec<Token> = inf_to_pos::inf_to_pos(r"(a|b)c*(d|e)+f?");
+    let postfix: Vec<Token> = inf_to_pos::inf_to_pos(r"(a|b)c*(d|e)+f?[g-k][0-5]");
     println!("{:?}", postfix);
     // 2. Inicializamos el grammar tree
     let mut gtree = grammar_tree::Tree::new();
@@ -63,84 +63,86 @@ fn main() {
 
     // // 4. Asignamos etiquetas a los nodos del árbol
     let (labels, root_node) = afd.read_tree();
+    println!("Valor de labels: {:?}", labels);
+    println!("Valor de root_node: {:?}", root_node);
 
     // // 5. Calculamos los valores de nulabilidad
-    let nullable_map = afd.find_nullable();
+    // let nullable_map = afd.find_nullable();
 
-    // // 6. Calculamos los firstpos y lastpos
-    let (firstpos_map, lastpos_map) = afd.find_first_last_pos();
+    // // // 6. Calculamos los firstpos y lastpos
+    // let (firstpos_map, lastpos_map) = afd.find_first_last_pos();
 
-    // // 7. Calculamos el followpos
-    let followpos_map = afd.find_followpos();
+    // // // 7. Calculamos el followpos
+    // let followpos_map = afd.find_followpos();
 
-    // // 8. Generamos los estados y el AFD
-    let (state_map, acceptance_states) = afd.create_states();
-    // // Render
+    // // // 8. Generamos los estados y el AFD
+    // let (state_map, acceptance_states) = afd.create_states();
+    // // // Render
 
-    view::render(&state_map, &acceptance_states, "afd");
+    // view::render(&state_map, &acceptance_states, "afd");
 
-    // // 9. Aplicamos el algoritmo de Hopcroft para minimizar el AFD
-    let partitions = direct_afd::DirectAFD::hopcroft_minimize(
-        &state_map, // Esto ahora debe ser de tipo HashMap<char, HashMap<char, Vec<String>>>
-        &acceptance_states,
-    );
+    // // // 9. Aplicamos el algoritmo de Hopcroft para minimizar el AFD
+    // let partitions = direct_afd::DirectAFD::hopcroft_minimize(
+    //     &state_map, // Esto ahora debe ser de tipo HashMap<char, HashMap<char, Vec<String>>>
+    //     &acceptance_states,
+    // );
 
-    // // 10. Construimos el AFD minimizado
-    let (minimized_afd, partition_to_state) = direct_afd::DirectAFD::build_minimized_afd(
-        partitions,
-        &state_map,
-        &afd.find_first_last_pos()
-            .0
-            .keys()
-            .flat_map(|s| s.chars())
-            .collect::<HashSet<char>>(),
-    );
+    // // // 10. Construimos el AFD minimizado
+    // let (minimized_afd, partition_to_state) = direct_afd::DirectAFD::build_minimized_afd(
+    //     partitions,
+    //     &state_map,
+    //     &afd.find_first_last_pos()
+    //         .0
+    //         .keys()
+    //         .flat_map(|s| s.chars())
+    //         .collect::<HashSet<char>>(),
+    // );
 
-    println!("===== AFD Minimizado (antes de render) =====");
-    for (state, transitions) in &minimized_afd {
-        println!("Estado: {}", state);
-        for (symbol, next_state) in transitions {
-            println!("  '{}' -> {}", symbol, next_state);
-        }
-    }
-    println!("==========================================");
+    // println!("===== AFD Minimizado (antes de render) =====");
+    // for (state, transitions) in &minimized_afd {
+    //     println!("Estado: {}", state);
+    //     for (symbol, next_state) in transitions {
+    //         println!("  '{}' -> {}", symbol, next_state);
+    //     }
+    // }
+    // println!("==========================================");
 
-    // // // 11. Imprimimos el AFD minimizado
-    direct_afd::DirectAFD::print_minimized_afd(&minimized_afd); // Pasamos una referencia aquí
+    // // // // 11. Imprimimos el AFD minimizado
+    // direct_afd::DirectAFD::print_minimized_afd(&minimized_afd); // Pasamos una referencia aquí
 
-    //13. Simulamos el AFD minimizado con el input "abb"
-    let input = "ababcddf";
+    // //13. Simulamos el AFD minimizado con el input "abb"
+    // let input = "ababcddf";
 
-    println!("===== DEPURACIÓN: RECORRIDO DEL AFD =====");
+    // println!("===== DEPURACIÓN: RECORRIDO DEL AFD =====");
 
-    // Estado inicial del AFD minimizado (ajustar si es diferente)
-    let mut current_state = 'A'; // Usamos `char` en lugar de `String`
-    println!("Estado inicial: {}", current_state);
+    // // Estado inicial del AFD minimizado (ajustar si es diferente)
+    // let mut current_state = 'A'; // Usamos `char` en lugar de `String`
+    // println!("Estado inicial: {}", current_state);
 
-    for symbol in input.chars() {
-        if let Some(transitions) = state_map.get(&current_state) {
-            if let Some(&next_state) = transitions.get(&symbol) {
-                println!("✅ {} --({})--> {}", current_state, symbol, next_state);
-                current_state = next_state; // Ahora es un `char`, no hay error de tipo
-            } else {
-                println!(
-                    "🚨 Error: No hay transición para '{}' con '{}'",
-                    current_state, symbol
-                );
-                break;
-            }
-        } else {
-            println!("🚨 Error: Estado desconocido '{}'", current_state);
-            break;
-        }
-    }
+    // for symbol in input.chars() {
+    //     if let Some(transitions) = state_map.get(&current_state) {
+    //         if let Some(&next_state) = transitions.get(&symbol) {
+    //             println!("✅ {} --({})--> {}", current_state, symbol, next_state);
+    //             current_state = next_state; // Ahora es un `char`, no hay error de tipo
+    //         } else {
+    //             println!(
+    //                 "🚨 Error: No hay transición para '{}' con '{}'",
+    //                 current_state, symbol
+    //             );
+    //             break;
+    //         }
+    //     } else {
+    //         println!("🚨 Error: Estado desconocido '{}'", current_state);
+    //         break;
+    //     }
+    // }
 
-    println!("===== FIN DEPURACIÓN =====");
+    // println!("===== FIN DEPURACIÓN =====");
 
-    // Simulación final del AFD minimizado
-    let verificar = simulate_afd(&state_map, &acceptance_states, &input);
-    println!("🔎 La simulación dice que este input es: {}", verificar);
+    // // Simulación final del AFD minimizado
+    // let verificar = simulate_afd(&state_map, &acceptance_states, &input);
+    // println!("🔎 La simulación dice que este input es: {}", verificar);
 
-    let verificar = simulate_afd(&state_map, &acceptance_states, &input);
-    println!("La simulación dice que este input es: {}", verificar);
+    // let verificar = simulate_afd(&state_map, &acceptance_states, &input);
+    // println!("La simulación dice que este input es: {}", verificar);
 }

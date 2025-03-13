@@ -48,26 +48,32 @@ impl DirectAFD {
             kleene_count: &mut usize,
             concat_count: &mut usize,
         ) -> String {
+            println!("Visitando nodo: {:?}", node.get_value());
+
             // Obtener los identificadores de los hijos (si existen)
             let left_id = node.get_left().map(|left| {
-                traverse(
+                let id = traverse(
                     &left,
                     labels,
                     literal_count,
                     union_count,
                     kleene_count,
                     concat_count,
-                )
+                );
+                println!("Nodo izquierdo: {:?} -> ID: {:?}", left.get_value(), id);
+                id
             });
             let right_id = node.get_right().map(|right| {
-                traverse(
+                let id = traverse(
                     &right,
                     labels,
                     literal_count,
                     union_count,
                     kleene_count,
                     concat_count,
-                )
+                );
+                println!("Nodo izquierdo: {:?} -> ID: {:?}", right.get_value(), id);
+                id
             });
 
             // Asignar identificador al nodo actual
@@ -122,11 +128,14 @@ impl DirectAFD {
                 _ => unreachable!("Unexpected token type in syntax tree"),
             };
 
+            println!("Asignando etiquieta: {} -> {:?}", node_id, labels.get(&node_id));
+
             node_id
         }
 
         // Llamar a la función de recorrido desde la raíz
         if let Some(root_node) = self.syntax_tree.get_root() {
+            println!("Iniciando recorrido desde la raíz");
             // Realizamos el recorrido y asignamos las etiquetas
             root_key = traverse(
                 &root_node,
@@ -136,6 +145,9 @@ impl DirectAFD {
                 &mut kleene_count,
                 &mut concat_count,
             );
+
+            println!("Árbol etiquetado: {:?}", labels);
+            println!("Clave raíz: {}", root_key);
         }
 
         (labels, root_key)
