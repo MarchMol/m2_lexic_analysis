@@ -142,22 +142,23 @@ fn expand(tokens: &Vec<Token>)->Vec<Token>{
                                 tem_que.push_front(rept_tk.clone());
                                 tem_stack.push(rept_tk.clone());
                             } else if rept_tk==&Token::LParen{
-                                tem_stack.pop();
                                 if tem_stack.is_empty(){
                                     break;
                                 }
+                                tem_stack.pop();
                                 tem_que.push_front(rept_tk.clone());
                             } else{
                                 tem_que.push_front(rept_tk.clone());
                             }
                     }
+                    tem_que.push_back(Token::RParen);
                     queue.push_back(last.clone());
                     for new in tem_que{
                         queue.push_back(new.clone());
                     }
                     queue.push_back(Token::Kleene);
                 } else if last==Token::Kleene{
-                    // Change nothing well a*+ = (a*)(a*)*
+                    // Change nothing: a*+ = (a*)(a*)* = a*
                 }else{
                     queue.push_back(last.clone());
                     queue.push_back(last.clone());
