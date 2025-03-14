@@ -48,7 +48,7 @@ impl DirectAFD {
             kleene_count: &mut usize,
             concat_count: &mut usize,
         ) -> String {
-            println!("Visitando nodo: {:?}", node.get_value());
+            // println!("Visitando nodo: {:?}", node.get_value());
 
             // Obtener los identificadores de los hijos (si existen)
             let left_id = node.get_left().map(|left| {
@@ -60,7 +60,7 @@ impl DirectAFD {
                     kleene_count,
                     concat_count,
                 );
-                println!("Nodo izquierdo: {:?} -> ID: {:?}", left.get_value(), id);
+                // println!("Nodo izquierdo: {:?} -> ID: {:?}", left.get_value(), id);
                 id
             });
             let right_id = node.get_right().map(|right| {
@@ -72,7 +72,7 @@ impl DirectAFD {
                     kleene_count,
                     concat_count,
                 );
-                println!("Nodo izquierdo: {:?} -> ID: {:?}", right.get_value(), id);
+                // println!("Nodo izquierdo: {:?} -> ID: {:?}", right.get_value(), id);
                 id
             });
 
@@ -121,21 +121,21 @@ impl DirectAFD {
                     id
                 }
                 Token::Empty => {
-                    let id = "Emtpy".to_string();
+                    let id = "empty".to_string();
                     labels.insert(id.clone(), "Empty".to_string());
                     id
                 }
                 _ => unreachable!("Unexpected token type in syntax tree"),
             };
 
-            println!("Asignando etiquieta: {} -> {:?}", node_id, labels.get(&node_id));
+            // println!("Asignando etiquieta: {} -> {:?}", node_id, labels.get(&node_id));
 
             node_id
         }
 
         // Llamar a la función de recorrido desde la raíz
         if let Some(root_node) = self.syntax_tree.get_root() {
-            println!("Iniciando recorrido desde la raíz");
+            // println!("Iniciando recorrido desde la raíz");
             // Realizamos el recorrido y asignamos las etiquetas
             root_key = traverse(
                 &root_node,
@@ -146,8 +146,8 @@ impl DirectAFD {
                 &mut concat_count,
             );
 
-            println!("Árbol etiquetado: {:?}", labels);
-            println!("Clave raíz: {}", root_key);
+            // println!("Árbol etiquetado: {:?}", labels);
+            // println!("Clave raíz: {}", root_key);
         }
 
         (labels, root_key)
@@ -156,15 +156,22 @@ impl DirectAFD {
     pub fn find_nullable(&self) -> HashMap<String, bool> {
         let (tree_map, _key) = self.read_tree();
         let mut nullable_map = HashMap::new();
+        // println!("Entrada: {:?}", tree_map);
 
         // Primera pasada: inicializar literales y Sentinel
         for (key, value) in &tree_map {
             if value.starts_with("Literal") {
                 nullable_map.insert(key.clone(), false);
+                // println!("Inicializando {} como false (Literal)", key);
             } else if value == "Sentinel" {
                 nullable_map.insert(key.clone(), false);
+                // println!("Inicializando {} como false (Sentinel)", key);
             } else if value == "Empty" {
                 nullable_map.insert(key.clone(), true);
+                // println!("Inicializando {} como true (Empty)", key);
+            } else if value.starts_with("Range") {
+                nullable_map.insert(key.clone(), false);
+                // println!("Inicializando {} como false (Range)", key);
             }
         }
 
@@ -180,11 +187,13 @@ impl DirectAFD {
                 if key.starts_with("beta") {
                     // Kleene (beta): El valor siempre es true
                     nullable_map.insert(key.clone(), true);
+                    // println!("{} es Kleene, siempre true", key);
                 } else if key.starts_with("gama") {
                     if let Some((c1, c2)) = extract_children(value) {
                         let nullable_c1 = *nullable_map.get(&c1).unwrap_or(&false);
                         let nullable_c2 = *nullable_map.get(&c2).unwrap_or(&false);
                         nullable_map.insert(key.clone(), nullable_c1 && nullable_c2);
+                        // println!("{} = {} AND {} → {}", key, c1, c2, nullable_c1 && nullable_c2);
                     }
                 } else if key.starts_with("alpha") {
                     // Union, si un hijo es nullable
@@ -192,32 +201,47 @@ impl DirectAFD {
                         let nullable_c1 = *nullable_map.get(&c1).unwrap_or(&false);
                         let nullable_c2 = *nullable_map.get(&c2).unwrap_or(&false);
                         nullable_map.insert(key.clone(), nullable_c1 || nullable_c2);
+                        // println!("{} = {} OR {} → {}", key, c1, c2, nullable_c1 || nullable_c2);
                     }
                 }
 
                 // Si hubo un cambio, marcamos que hay cambios
                 if nullable_map.get(key) != original_nullable.as_ref() {
+                    // println!("Cambio detectado en {}", key);
                     changes = true;
                 }
             }
+            // let expected_map = HashMap::from([
+            //     ("4".to_string(), false), ("beta2".to_string(), true), ("gama4".to_string(), false), 
+            //     ("alpha1".to_string(), false), ("gama7".to_string(), false), ("6".to_string(), false), 
+            //     ("alpha3".to_string(), true), ("gama6".to_string(), false), ("7".to_string(), false), 
+            //     ("gama1".to_string(), false), ("2".to_string(), false), ("gama5".to_string(), false), 
+            //     ("beta3".to_string(), true), ("3".to_string(), false), ("beta1".to_string(), true), 
+            //     ("gama2".to_string(), false), ("5".to_string(), false), ("1".to_string(), false), 
+            //     ("9".to_string(), false), ("8".to_string(), false), ("alpha2".to_string(), false), 
+            //     ("10".to_string(), false), ("gama8".to_string(), false), ("gama3".to_string(), false), 
+            //     ("empty".to_string(), true), ("11".to_string(), false)
+            // ]);
+            
+            // println!("Nullable Map Final: {:?}", nullable_map);
+            // println!("Coincide con el mapa esperado: {}", nullable_map == expected_map);
         }
 
         nullable_map
     }
 
-    pub fn find_first_last_pos(
-        &self,
-    ) -> (HashMap<String, Vec<String>>, HashMap<String, Vec<String>>) {
+    pub fn find_first_last_pos(&self,) -> (HashMap<String, Vec<String>>, HashMap<String, Vec<String>>) {
         let (tree_map, _key) = self.read_tree();
         let mut firstpos_map: HashMap<String, Vec<String>> = HashMap::new();
         let mut lastpos_map: HashMap<String, Vec<String>> = HashMap::new();
 
         // Primera pasada: Inicializar Literales
         for (key, value) in &tree_map {
-            if value.starts_with("Literal") || value.starts_with("Sentinel") {
+            if value.starts_with("Literal") || value.starts_with("Sentinel") || value.starts_with("Range") {
                 // Para Literals, firstpos y lastpos es solo su propia key
                 firstpos_map.insert(key.clone(), vec![key.clone()]);
                 lastpos_map.insert(key.clone(), vec![key.clone()]);
+                // println!("Inicializando {}: firstpos = {:?}, lastpos = {:?}", key, firstpos_map.get(key), lastpos_map.get(key));
             }
         }
 
@@ -238,6 +262,9 @@ impl DirectAFD {
                         let lastpos = lastpos_map.get(&c1).cloned().unwrap_or_default();
                         firstpos_map.insert(key.clone(), firstpos);
                         lastpos_map.insert(key.clone(), lastpos);
+
+                        // println!("beta -> {} [Left: {}]: ", key, c1);
+                        // println!("firstpos = {:?}, lastpos = {:?}", firstpos_map.get(key), lastpos_map.get(key));
                     }
                 } else if key.starts_with("alpha") {
                     // Union (alpha): Unir firstpos y lastpos de los nodos izquierdo y derecho
@@ -253,6 +280,9 @@ impl DirectAFD {
 
                         firstpos_map.insert(key.clone(), firstpos);
                         lastpos_map.insert(key.clone(), lastpos);
+
+                        // println!("alpha -> {} [Left: {}, Right: {}]: ", key, c1, c2);
+                        // println!("firstpos = {:?}, lastpos = {:?}", firstpos_map.get(key), lastpos_map.get(key));
                     }
                 } else if key.starts_with("gama") {
                     // Concat (gama): Verificar nullabilidad para firstpos y lastpos
@@ -264,20 +294,6 @@ impl DirectAFD {
 
                         let nullable_c1 = *self.find_nullable().get(&c1).unwrap_or(&false);
                         let nullable_c2 = *self.find_nullable().get(&c2).unwrap_or(&false);
-
-                        // println!(
-                        //     "Procesando nodo {} (Concat):\n  - Hijo izquierdo: {}\n  - Hijo derecho: {}\n  - Nullable Izq: {}\n  - Nullable Der: {}",
-                        //     key, c1, c2, nullable_c1, nullable_c2
-                        // );
-
-                        // println!(
-                        //     "  - Firstpos izquierdo: {:?}\n  - Firstpos derecho: {:?}",
-                        //     firstpos_c1, firstpos_c2
-                        // );
-                        // println!(
-                        //     "  - Lastpos izquierdo: {:?}\n  - Lastpos derecho: {:?}",
-                        //     lastpos_c1, lastpos_c2
-                        // );
 
                         // Firstpos: Si el izquierdo es nullable, hacer unión con el derecho
                         let firstpos = if nullable_c1 {
@@ -293,13 +309,11 @@ impl DirectAFD {
                             lastpos_c2
                         };
 
-                        // println!(
-                        //     "  - Firstpos final: {:?}\n  - Lastpos final: {:?}",
-                        //     firstpos, lastpos
-                        // );
-
                         firstpos_map.insert(key.clone(), firstpos);
                         lastpos_map.insert(key.clone(), lastpos);
+
+                        // println!("gama -> {} [Left: {}, Right: {}]: ", key, c1, c2);
+                        // println!("firstpos = {:?}, lastpos = {:?}", firstpos_map.get(key), lastpos_map.get(key));
                     }
                 }
 
@@ -312,10 +326,36 @@ impl DirectAFD {
             }
         }
 
-        // Retornar los dos diccionarios: firstpos_map y lastpos_map
-        println!("\n===== RESULTADO FINAL =====");
-        // println!("Particiones minimizadas: {:?}", partitions);
+        // let expected_fp_map: HashMap<String, Vec<String>> = HashMap::from([
+        //     ("alpha1".to_string(), vec!["1".to_string(), "2".to_string()]), ("5".to_string(), vec!["5".to_string()]), ("gama7".to_string(), vec!["1".to_string(), "2".to_string()]),
+        //     ("1".to_string(), vec!["1".to_string()]), ("beta3".to_string(), vec!["10".to_string()]), ("gama6".to_string(), vec!["3".to_string(), "4".to_string(), "5".to_string(), "6".to_string(), "7".to_string()]),
+        //     ("8".to_string(), vec!["8".to_string()]), ("gama3".to_string(), vec!["7".to_string()]), ("gama1".to_string(), vec!["9".to_string()]),
+        //     ("gama4".to_string(), vec!["6".to_string(), "7".to_string()]), ("10".to_string(), vec!["10".to_string()]), ("beta1".to_string(), vec!["3".to_string()]),
+        //     ("7".to_string(), vec!["7".to_string()]), ("gama8".to_string(), vec!["1".to_string(), "2".to_string()]), ("11".to_string(), vec!["11".to_string()]),
+        //     ("4".to_string(), vec!["4".to_string()]), ("9".to_string(), vec!["9".to_string()]), ("2".to_string(), vec!["2".to_string()]), ("gama5".to_string(), vec!["4".to_string(), "5".to_string(), "6".to_string(), "7".to_string()]),
+        //     ("alpha3".to_string(), vec!["6".to_string()]), ("beta2".to_string(), vec!["4".to_string(), "5".to_string()]), ("3".to_string(), vec!["3".to_string()]),
+        //     ("alpha2".to_string(), vec!["4".to_string(), "5".to_string()]), ("6".to_string(), vec!["6".to_string()]), ("gama2".to_string(), vec!["8".to_string()]),
+        // ]);
+    
+        // let expected_lp_map: HashMap<String, Vec<String>> = HashMap::from([
+        //     ("2".to_string(), vec!["2".to_string()]), ("10".to_string(), vec!["10".to_string()]), ("1".to_string(), vec!["1".to_string()]),
+        //     ("8".to_string(), vec!["8".to_string()]), ("9".to_string(), vec!["9".to_string()]), ("gama3".to_string(), vec!["10".to_string(), "9".to_string()]),
+        //     ("gama6".to_string(), vec!["10".to_string(), "9".to_string()]), ("alpha3".to_string(), vec!["6".to_string()]), ("gama1".to_string(), vec!["10".to_string(), "9".to_string()]),
+        //     ("gama7".to_string(), vec!["10".to_string(), "9".to_string()]), ("5".to_string(), vec!["5".to_string()]), ("11".to_string(), vec!["11".to_string()]),
+        //     ("beta3".to_string(), vec!["10".to_string()]), ("4".to_string(), vec!["4".to_string()]), ("7".to_string(), vec!["7".to_string()]),
+        //     ("gama8".to_string(), vec!["11".to_string()]), ("3".to_string(), vec!["3".to_string()]), ("6".to_string(), vec!["6".to_string()]),
+        //     ("alpha1".to_string(), vec!["1".to_string(), "2".to_string()]), ("gama4".to_string(), vec!["10".to_string(), "9".to_string()]), ("gama2".to_string(), vec!["10".to_string(), "9".to_string()]),
+        //     ("beta2".to_string(), vec!["4".to_string(), "5".to_string()]), ("gama5".to_string(), vec!["10".to_string(), "9".to_string()]), ("alpha2".to_string(), vec!["4".to_string(), "5".to_string()]),
+        //     ("beta1".to_string(), vec!["3".to_string()]),
+        // ]);
+    
+        // println!("Firstpos Map Final: {:?}", firstpos_map);
+        // println!("Coincide con el mapa esperado: {}", firstpos_map == expected_fp_map);
+    
+        // println!("Lastpos Map Final: {:?}", lastpos_map);
+        // println!("Coincide con el mapa esperado: {}", lastpos_map == expected_lp_map);
 
+        // Retornar los dos diccionarios: firstpos_map y lastpos_map
         (firstpos_map, lastpos_map)
     }
 
@@ -343,6 +383,7 @@ impl DirectAFD {
                                     .entry(num.clone())
                                     .and_modify(|e| e.extend(firstpos_c2.clone()))
                                     .or_insert(firstpos_c2.clone());
+                                // println!("gama -> {}: followpos = {:?}", num, followpos_map.get(num));
                             }
                         }
                     }
@@ -357,6 +398,7 @@ impl DirectAFD {
                                     .entry(num.clone())
                                     .and_modify(|e| e.extend(firstpos_c1.clone()))
                                     .or_insert(firstpos_c1.clone());
+                                // println!("beta -> {}: followpos = {:?}", num, followpos_map.get(num));
                             }
                         }
                     }
@@ -366,7 +408,7 @@ impl DirectAFD {
 
         // Asegurar que todos los literales y sentinels tengan followpos, aunque sea vacío
         for (key, value) in &tree_map {
-            if value.starts_with("Literal") || value.starts_with("Sentinel") {
+            if value.starts_with("Literal") || value.starts_with("Sentinel") || value.starts_with("Range") {
                 followpos_map.entry(key.clone()).or_insert(Vec::new());
             }
         }
@@ -374,11 +416,30 @@ impl DirectAFD {
         // Filtrar y eliminar los nodos que no sean Sentinel o Literal
         followpos_map.retain(|key, _| {
             if let Some(value) = tree_map.get(key) {
-                value.starts_with("Literal") || value.starts_with("Sentinel")
+                value.starts_with("Literal") || value.starts_with("Sentinel") || value.starts_with("Range") 
             } else {
                 false
             }
         });
+        let followpos_map = normalize_map(&followpos_map);
+
+        // println!("\n===== FOLLOWPOS FINAL =====");
+        // let expected_followpos_map = HashMap::from([
+        //     ("3".to_string(), vec!["3".to_string(), "4".to_string(), "5".to_string(), "6".to_string(), "7".to_string()]),
+        //     ("9".to_string(), vec!["10".to_string(), "11".to_string()]),
+        //     ("6".to_string(), vec!["7".to_string()]),
+        //     ("11".to_string(), vec![]),
+        //     ("10".to_string(), vec!["10".to_string(), "11".to_string()]),
+        //     ("1".to_string(), vec!["3".to_string(), "4".to_string(), "5".to_string(), "6".to_string(), "7".to_string()]),
+        //     ("8".to_string(), vec!["9".to_string()]),
+        //     ("7".to_string(), vec!["8".to_string()]),
+        //     ("5".to_string(), vec!["4".to_string(), "5".to_string(), "6".to_string(), "7".to_string()]),
+        //     ("2".to_string(), vec!["3".to_string(), "4".to_string(), "5".to_string(), "6".to_string(), "7".to_string()]),
+        //     ("4".to_string(), vec!["4".to_string(), "5".to_string(), "6".to_string(), "7".to_string()]),
+        // ]);
+    
+        // println!("Followpos Map Final: {:?}", followpos_map);
+        // println!("¿Coincide con el mapa esperado? {}", followpos_map == expected_followpos_map);
 
         followpos_map
     }
@@ -399,32 +460,42 @@ impl DirectAFD {
             .unwrap_or(&Vec::new())
             .clone();
 
+        println!("Root FirstPos: {:?}", root_firstpos);
+
         state_queue.insert(state_letter.to_string(), root_firstpos.clone());
 
         let followpos_map = self.find_followpos();
 
         labels_map.retain(|key, _| followpos_map.contains_key(key));
 
+        println!("Labels Map after retaining: {:?}", labels_map);
+
         let mut columns: HashSet<String> = HashSet::new();
         for (_key, value) in &labels_map {
-            if value.starts_with("Literal") {
-                if let Some(c) = value.chars().nth(9) {
-                    columns.insert(c.to_string()); // Insertar el valor extraído en el HashSet
+            if value.starts_with("Literal") || value.starts_with("Range") {
+                if let Some(start) = value.find('\'') {
+                    if let Some(end) = value[start + 1..].find('\'') {
+                        let extracted = &value[start + 1..start + 1 + end];
+                        columns.insert(extracted.to_string()); // Insertar el valor extraído en el HashSet
+                    }
                 }
             }
         }
-        println!("\n===== INICIO DE MINIMIZACIÓN =====");
-        // println!("Particiones iniciales: {:?}", partitions);
+
+        println!("Columns: {:?}", columns);
 
         while !state_queue.is_empty() {
             // Obtener el primer estado y removerlo de state_queue
             let (state_key, state_value) = state_queue.drain().next().unwrap();
+            println!("Processing state: {} -> {:?}", state_key, state_value);
+
             // Agregar el estado a visited_states
             visited_states.insert(state_key.clone(), state_value.clone());
+
             // Crea los valores de cada columna
             for column in &columns {
                 let mut column_vector: Vec<String> = Vec::new();
-                let mut assigned_letter = None;
+                println!("Processing column: {}", column);
 
                 // Verificar que números en state_value están asociados a la columna
                 for number in &state_value {
@@ -445,46 +516,28 @@ impl DirectAFD {
                         }
                     }
                 }
+                println!("Column vector: {:?}", column_vector);
+
                 // Si el column_vector tiene elementos, guardamos en state_map
                 if !column_vector.is_empty() {
                     // Verificar si el estado creado ya existe
-                    if !visited_states.values().any(|v: &Vec<String>| {
-                        let mut v_sorted = v.clone();
-                        v_sorted.sort();
-                        let mut column_vector_sorted = column_vector.clone();
-                        column_vector_sorted.sort();
+                    let column_set: HashSet<_> = column_vector.iter().cloned().collect();
 
-                        v_sorted == column_vector_sorted
-                    }) {
-                        state_letter = (state_letter as u8 + 1) as char;
-                        println!("column vector: {:?}", column_vector);
-                        state_queue.insert(state_letter.to_string(), column_vector.clone());
-                    }
-
-                    // Busca la letra asignada a un estado
-                    if let Some(existing_letter) = visited_states.iter().find_map(|(key, value)| {
-                        if value == &column_vector {
-                            Some(key)
+                    // Verificar si ya existe en visited_states o en state_queue
+                    let assigned_letter = visited_states.iter().chain(state_queue.iter()).find_map(|(key, value)| {
+                        let v_set: HashSet<_> = value.iter().cloned().collect();
+                        if v_set == column_set {
+                            Some(key.clone())
                         } else {
                             None
                         }
-                    }) {
-                        assigned_letter = Some(existing_letter.clone());
-                    }
-                    if assigned_letter.is_none() {
-                        if let Some(existing_letter) =
-                            state_queue.iter().find_map(|(key, value)| {
-                                if value == &column_vector {
-                                    Some(key)
-                                } else {
-                                    None
-                                }
-                            })
-                        {
-                            assigned_letter = Some(existing_letter.clone());
-                        }
-                    }
-
+                    }).or_else(|| {
+                        // Si no existe, avanzar la letra y agregarlo a la queue
+                        state_letter = (state_letter as u8 + 1) as char;
+                        state_queue.insert(state_letter.to_string(), column_vector.clone());
+                        println!("New state added to queue: {}", state_letter);
+                        Some(state_letter.to_string())
+                    });
                     // Verificar si el estado es de aceptación
                     if column_vector.iter().any(|num| {
                         if let Some(symbol) = labels_map.get(num) {
@@ -494,6 +547,7 @@ impl DirectAFD {
                         }
                     }) {
                         acceptance_states.push(state_letter);
+                        println!("State {} is acceptance state", state_letter);
                     }
 
                     // Insertar o actualizar el valor en state_map
@@ -505,15 +559,15 @@ impl DirectAFD {
                                 column.chars().next().unwrap(),
                                 assigned_letter.chars().next().unwrap(),
                             );
+                        
+                        println!("Inserted/Updated in state_map: {} -> {} -> {}", state_key, column, assigned_letter);
                     }
                 }
-                // println!("Estado actual del visited_states {:?}", visited_states);
-                // println!("Visitando la columna {}", column);
-                // println!("Followpos de la columna: {:?}", column_vector);
-                // println!("Estado actual del state_queue {:?}", state_queue);
-                // println!("Estado actual del acceptance_states {:?}", acceptance_states);
             }
         }
+
+        println!("Mapa de Estados: {:?}", state_map);
+        println!("Estados de aceptación: {:?}", acceptance_states);
 
         (state_map, acceptance_states)
     }
@@ -704,4 +758,16 @@ fn extract_children(value: &str) -> Option<(String, String)> {
 fn extract_single_child(value: &str) -> Option<String> {
     let content = value.trim_start_matches('(').trim_end_matches(')');
     Some(content.to_string())
+}
+
+fn normalize_map(map: &HashMap<String, Vec<String>>) -> HashMap<String, Vec<String>> {
+    let mut normalized = HashMap::new();
+
+    for (key, mut value) in map.clone() {
+        value.sort(); // Ordena cada vector
+        value.dedup(); // Elimina duplicados si existen
+        normalized.insert(key, value);
+    }
+
+    normalized
 }

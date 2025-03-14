@@ -45,7 +45,7 @@ fn convert_minimized_afd_to_original(
 
 fn main() {
     // 1. Convertimos la regex a postfix (a|b)*c(d|e)+f?
-    let postfix: Vec<Token> = inf_to_pos::inf_to_pos(r"(a|b)c*(d|e)+f?[g-k][0-5]");
+    let postfix: Vec<Token> = inf_to_pos::inf_to_pos(r"(a|b)c*(d|e)*f?[g-k][0-5]l+");
     println!("{:?}", postfix);
     // 2. Inicializamos el grammar tree
     let mut gtree = grammar_tree::Tree::new();
@@ -63,20 +63,18 @@ fn main() {
 
     // // 4. Asignamos etiquetas a los nodos del árbol
     let (labels, root_node) = afd.read_tree();
-    println!("Valor de labels: {:?}", labels);
-    println!("Valor de root_node: {:?}", root_node);
 
     // // 5. Calculamos los valores de nulabilidad
-    // let nullable_map = afd.find_nullable();
+    let nullable_map = afd.find_nullable();
 
     // // // 6. Calculamos los firstpos y lastpos
-    // let (firstpos_map, lastpos_map) = afd.find_first_last_pos();
+    let (firstpos_map, lastpos_map) = afd.find_first_last_pos();
 
     // // // 7. Calculamos el followpos
-    // let followpos_map = afd.find_followpos();
+    let followpos_map = afd.find_followpos();
 
     // // // 8. Generamos los estados y el AFD
-    // let (state_map, acceptance_states) = afd.create_states();
+    let (state_map, acceptance_states) = afd.create_states();
     // // // Render
 
     // view::render(&state_map, &acceptance_states, "afd");
