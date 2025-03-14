@@ -142,11 +142,11 @@ fn expand(tokens: &Vec<Token>)->Vec<Token>{
                                 tem_que.push_front(rept_tk.clone());
                                 tem_stack.push(rept_tk.clone());
                             } else if rept_tk==&Token::LParen{
+                                tem_stack.pop();
+                                tem_que.push_front(rept_tk.clone());
                                 if tem_stack.is_empty(){
                                     break;
                                 }
-                                tem_stack.pop();
-                                tem_que.push_front(rept_tk.clone());
                             } else{
                                 tem_que.push_front(rept_tk.clone());
                             }
@@ -243,6 +243,7 @@ pub fn inf_to_pos(input: &str) ->Vec<Token>{
     let input_eof = format!("({})#",input);
     let tokens = tokenize(&input_eof);
     let expanded = expand(&tokens);
+    println!("exp: {:?}",expanded);
     let posttoks = shunting_yard(expanded);
     Vec::from(posttoks)
 }
