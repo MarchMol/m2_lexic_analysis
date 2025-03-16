@@ -1,6 +1,7 @@
 use std::clone;
 use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
+use std::collections::BTreeMap;
 
 use crate::grammar_tree::{Tree, TreeNode};
 use crate::inf_to_pos::Token;
@@ -500,15 +501,18 @@ impl DirectAFD {
                 // Verificar que números en state_value están asociados a la columna
                 for number in &state_value {
                     if let Some(symbol) = labels_map.get(number) {
-                        if let Some(c) = symbol.chars().nth(9) {
-                            if c.to_string() == *column {
-                                if let Some(followpos_values) = followpos_map.get(number) {
-                                    let mut set: HashSet<_> =
-                                        column_vector.iter().cloned().collect();
-                                    for val in followpos_values {
-                                        if set.insert(val.clone()) {
-                                            // insert() returns false if the value already exists
-                                            column_vector.push(val.to_string());
+                        if let Some(start) = symbol.find('\'') {
+                            if let Some(end) = symbol[start + 1..].find('\'') {
+                                let extracted = &symbol[start + 1..start + 1 + end];
+                                if extracted == column {
+                                    if let Some(followpos_values) = followpos_map.get(number) {
+                                        let mut set: HashSet<_> =
+                                            column_vector.iter().cloned().collect();
+                                        for val in followpos_values {
+                                            if set.insert(val.clone()) {
+                                                // insert() returns false if the value already exists
+                                                column_vector.push(val.to_string());
+                                            }
                                         }
                                     }
                                 }
@@ -523,6 +527,7 @@ impl DirectAFD {
                     // Verificar si el estado creado ya existe
                     let column_set: HashSet<_> = column_vector.iter().cloned().collect();
 
+                    println!("State Queue before adding new state: {:?}", state_queue);
                     // Verificar si ya existe en visited_states o en state_queue
                     let assigned_letter = visited_states.iter().chain(state_queue.iter()).find_map(|(key, value)| {
                         let v_set: HashSet<_> = value.iter().cloned().collect();
@@ -538,6 +543,8 @@ impl DirectAFD {
                         println!("New state added to queue: {}", state_letter);
                         Some(state_letter.to_string())
                     });
+                    println!("State Queue after adding new state: {:?}", state_queue);
+
                     // Verificar si el estado es de aceptación
                     if column_vector.iter().any(|num| {
                         if let Some(symbol) = labels_map.get(num) {
@@ -564,6 +571,10 @@ impl DirectAFD {
                     }
                 }
             }
+            println!("State Queue after processing: {:?}", state_queue);
+
+            println!("Visited States after processing {}: {:?}", state_key, visited_states);
+            println!("-------------------------------------------");
         }
 
         println!("Mapa de Estados: {:?}", state_map);
