@@ -445,10 +445,11 @@ impl DirectAFD {
         followpos_map
     }
 
-    pub fn create_states(&mut self) -> (HashMap<char, HashMap<char, char>>, Vec<char>) {
-        let mut state_map: HashMap<char, HashMap<char, char>> = HashMap::new(); // Mapa de estados y sus transiciones
-        let mut acceptance_states: Vec<char> = Vec::new(); // Lista de estados de aceptación
+    pub fn create_states(&mut self) -> (HashMap<char, HashMap<String, char>>, HashSet<char>) {
+        let mut state_map: HashMap<char, HashMap<String, char>> = HashMap::new(); // Mapa de estados y sus transiciones
+        let mut acceptance_states: HashSet<char> = HashSet::new(); // Lista de estados de aceptación
         let mut state_queue: HashMap<String, Vec<String>> = HashMap::new(); // Cola de estados por procesar
+        let mut fake_state_queue: HashMap<String, Vec<String>> = HashMap::new();
         let mut visited_states: HashMap<String, Vec<String>> = HashMap::new(); // Para evitar procesar estados duplicados
         let mut state_letter = 'A';
 
@@ -464,6 +465,7 @@ impl DirectAFD {
         println!("Root FirstPos: {:?}", root_firstpos);
 
         state_queue.insert(state_letter.to_string(), root_firstpos.clone());
+        fake_state_queue.insert(state_letter.to_string(), root_firstpos.clone());
 
         let followpos_map = self.find_followpos();
 
@@ -487,7 +489,8 @@ impl DirectAFD {
 
         while !state_queue.is_empty() {
             // Obtener el primer estado y removerlo de state_queue
-            let (state_key, state_value) = state_queue.drain().next().unwrap();
+            let (state_key, state_value) = fake_state_queue.drain().next().unwrap();
+            state_queue.remove(&state_key.clone());
             println!("Processing state: {} -> {:?}", state_key, state_value);
 
             // Agregar el estado a visited_states
@@ -553,7 +556,7 @@ impl DirectAFD {
                             false
                         }
                     }) {
-                        acceptance_states.push(state_letter);
+                        acceptance_states.insert(state_letter);
                         println!("State {} is acceptance state", state_letter);
                     }
 
@@ -563,14 +566,16 @@ impl DirectAFD {
                             .entry(state_key.chars().next().unwrap())
                             .or_insert_with(HashMap::new)
                             .insert(
-                                column.chars().next().unwrap(),
+                                column.replace(',' , "-").to_string(),
                                 assigned_letter.chars().next().unwrap(),
                             );
+
                         
                         println!("Inserted/Updated in state_map: {} -> {} -> {}", state_key, column, assigned_letter);
                     }
                 }
             }
+            fake_state_queue = state_queue.clone();
             println!("State Queue after processing: {:?}", state_queue);
 
             println!("Visited States after processing {}: {:?}", state_key, visited_states);
