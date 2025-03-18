@@ -462,7 +462,7 @@ impl DirectAFD {
             .unwrap_or(&Vec::new())
             .clone();
 
-        println!("Root FirstPos: {:?}", root_firstpos);
+        // println!("Root FirstPos: {:?}", root_firstpos);
 
         state_queue.insert(state_letter.to_string(), root_firstpos.clone());
         fake_state_queue.insert(state_letter.to_string(), root_firstpos.clone());
@@ -471,7 +471,7 @@ impl DirectAFD {
 
         labels_map.retain(|key, _| followpos_map.contains_key(key));
 
-        println!("Labels Map after retaining: {:?}", labels_map);
+        // println!("Labels Map after retaining: {:?}", labels_map);
 
         let mut columns: HashSet<String> = HashSet::new();
         for (_key, value) in &labels_map {
@@ -485,13 +485,13 @@ impl DirectAFD {
             }
         }
 
-        println!("Columns: {:?}", columns);
+        // println!("Columns: {:?}", columns);
 
         while !state_queue.is_empty() {
             // Obtener el primer estado y removerlo de state_queue
             let (state_key, state_value) = fake_state_queue.drain().next().unwrap();
             state_queue.remove(&state_key.clone());
-            println!("Processing state: {} -> {:?}", state_key, state_value);
+            // println!("Processing state: {} -> {:?}", state_key, state_value);
 
             // Agregar el estado a visited_states
             visited_states.insert(state_key.clone(), state_value.clone());
@@ -499,7 +499,7 @@ impl DirectAFD {
             // Crea los valores de cada columna
             for column in &columns {
                 let mut column_vector: Vec<String> = Vec::new();
-                println!("Processing column: {}", column);
+                // println!("Processing column: {}", column);
 
                 // Verificar que números en state_value están asociados a la columna
                 for number in &state_value {
@@ -523,14 +523,14 @@ impl DirectAFD {
                         }
                     }
                 }
-                println!("Column vector: {:?}", column_vector);
+                // println!("Column vector: {:?}", column_vector);
 
                 // Si el column_vector tiene elementos, guardamos en state_map
                 if !column_vector.is_empty() {
                     // Verificar si el estado creado ya existe
                     let column_set: HashSet<_> = column_vector.iter().cloned().collect();
 
-                    println!("State Queue before adding new state: {:?}", state_queue);
+                    // println!("State Queue before adding new state: {:?}", state_queue);
                     // Verificar si ya existe en visited_states o en state_queue
                     let assigned_letter = visited_states.iter().chain(state_queue.iter()).find_map(|(key, value)| {
                         let v_set: HashSet<_> = value.iter().cloned().collect();
@@ -543,10 +543,10 @@ impl DirectAFD {
                         // Si no existe, avanzar la letra y agregarlo a la queue
                         state_letter = (state_letter as u8 + 1) as char;
                         state_queue.insert(state_letter.to_string(), column_vector.clone());
-                        println!("New state added to queue: {}", state_letter);
+                        // println!("New state added to queue: {}", state_letter);
                         Some(state_letter.to_string())
                     });
-                    println!("State Queue after adding new state: {:?}", state_queue);
+                    // println!("State Queue after adding new state: {:?}", state_queue);
 
                     // Verificar si el estado es de aceptación
                     if column_vector.iter().any(|num| {
@@ -557,7 +557,7 @@ impl DirectAFD {
                         }
                     }) {
                         acceptance_states.insert(state_letter);
-                        println!("State {} is acceptance state", state_letter);
+                        // println!("State {} is acceptance state", state_letter);
                     }
 
                     // Insertar o actualizar el valor en state_map
@@ -571,15 +571,15 @@ impl DirectAFD {
                             );
 
                         
-                        println!("Inserted/Updated in state_map: {} -> {} -> {}", state_key, column, assigned_letter);
+                        // println!("Inserted/Updated in state_map: {} -> {} -> {}", state_key, column, assigned_letter);
                     }
                 }
             }
             fake_state_queue = state_queue.clone();
-            println!("State Queue after processing: {:?}", state_queue);
+            // println!("State Queue after processing: {:?}", state_queue);
 
-            println!("Visited States after processing {}: {:?}", state_key, visited_states);
-            println!("-------------------------------------------");
+            // println!("Visited States after processing {}: {:?}", state_key, visited_states);
+            // println!("-------------------------------------------");
         }
 
         println!("Mapa de Estados: {:?}", state_map);

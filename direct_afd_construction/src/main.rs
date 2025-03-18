@@ -44,8 +44,8 @@ fn convert_minimized_afd_to_original(
 }
 
 fn main() {
-    // 1. Convertimos la regex a postfix (a|b)*c(d|e)+f?
-    let postfix: Vec<Token> = inf_to_pos::inf_to_pos(r"(a|b)c*(d|e)*f?[g-k][0-5]l+");
+    // 1. Convertimos la regex a postfix
+    let postfix: Vec<Token> = inf_to_pos::inf_to_pos(r"a4?[A-Z][0-9]+r|s?\*\+\(\)a");
     println!("{:?}", postfix);
     // 2. Inicializamos el grammar tree
     let mut gtree = grammar_tree::Tree::new();
@@ -77,7 +77,7 @@ fn main() {
     let (state_map, acceptance_states) = afd.create_states();
     // // // Render
 
-    // view::render(&state_map, &acceptance_states, "afd");
+    view::render(&state_map, &acceptance_states, "afd");
 
     // // // 9. Aplicamos el algoritmo de Hopcroft para minimizar el AFD
     // let partitions = direct_afd::DirectAFD::hopcroft_minimize(

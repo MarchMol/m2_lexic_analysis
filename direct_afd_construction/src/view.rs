@@ -1,11 +1,11 @@
 use petgraph::dot::Dot;
 use petgraph::Graph;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::fs::File;
 use std::io::Write;
 use std::process::Command;
 
-pub fn get_all_states(ginfo: &HashMap<char, HashMap<char, char>>)->Vec<String>{
+pub fn get_all_states(ginfo: &HashMap<char, HashMap<String, char>>)->Vec<String>{
     let states = ginfo.keys();
     let mut all_states: Vec<String> = Vec::new();
     for from in states{
@@ -27,10 +27,10 @@ pub fn get_all_states(ginfo: &HashMap<char, HashMap<char, char>>)->Vec<String>{
     all_states
 }
 
-pub fn generate_graph(ginfo: &HashMap<char, HashMap<char, char>>, states: &Vec<String>)->Graph<String, String>{
+pub fn generate_graph(ginfo: &HashMap<char, HashMap<String, char>>, states: &Vec<String>)->Graph<String, String>{
     let mut graph = Graph::<String, String>::new();
     // Creating all nodes
-    println!("{:?}", ginfo);
+    // println!("{:?}", ginfo);
     for st in states{
         graph.add_node(st.to_string());
     }
@@ -60,12 +60,12 @@ pub fn generate_graph(ginfo: &HashMap<char, HashMap<char, char>>, states: &Vec<S
 
             }
         }
-        println!("nodes: {:?}",from_weight);
+        // println!("nodes: {:?}",from_weight);
     }
     graph
 }
 
-pub fn render(ginfo: &HashMap<char, HashMap<char, char>>, accept: &Vec<char>, dest: &str) {
+pub fn render(ginfo: &HashMap<char, HashMap<String, char>>, accept: &HashSet<char>, dest: &str) {
     let all_states = get_all_states(&ginfo);
     let graph =generate_graph(ginfo, &all_states);
     let start_n  = graph
@@ -113,7 +113,7 @@ pub fn render(ginfo: &HashMap<char, HashMap<char, char>>, accept: &Vec<char>, de
             );
         }
         Err(err) => {
-            eprintln!("Failed to execute dot: {}", err);
+            eprintln!("Can't render. Failed to execute dot: {}", err);
         }
     }
 }
