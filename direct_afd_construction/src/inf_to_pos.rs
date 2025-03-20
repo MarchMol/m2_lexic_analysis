@@ -71,7 +71,6 @@ fn tokenize(input: &str) -> Vec<Token> {
                         panic!("Invalid character in Tokener. Expected alphanumeric or underscore.");
                     }
                 }
-
                 if id.is_empty() {
                     panic!("Invalid Tokener syntax. Expected a String between keys");
                 }
@@ -133,6 +132,9 @@ fn expand(tokens: &Vec<Token>)->Vec<Token>{
             Token::Literal(_c)|Token::Range(_c,_)=>{
                 queue.push_back(tk.clone());
             }
+            Token::Tokener(ref s) => {
+                queue.push_back(tk.clone());
+            },
             Token::Sentinel | Token::RParen | Token::LParen=>{
                 queue.push_back(tk.clone());
             }
@@ -218,6 +220,9 @@ fn shunting_yard(tokens: Vec<Token>)->VecDeque<Token>{
             Token::Literal(_c) | Token::Range(_c, _) => {
                 queue.push_back(tk);
             },
+            Token::Tokener(ref s) => {
+                queue.push_back(tk);
+            },
             Token::LParen | Token::Empty=>{
                 stack.push(tk);
             }
@@ -233,9 +238,6 @@ fn shunting_yard(tokens: Vec<Token>)->VecDeque<Token>{
                 }
             },
             Token::Sentinel=>{
-                queue.push_back(tk);
-            }
-            Token::Tokener(_)=>{
                 queue.push_back(tk);
             }
 
@@ -268,7 +270,6 @@ pub fn inf_to_pos(input: &str) ->Vec<Token>{
     let input_eof = format!("({})#",input);
     let tokens = tokenize(&input_eof);
     let expanded = expand(&tokens);
-    println!("exp: {:?}",expanded);
     let posttoks = shunting_yard(expanded);
     Vec::from(posttoks)
 }
