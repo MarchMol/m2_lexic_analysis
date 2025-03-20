@@ -91,6 +91,12 @@ impl DirectAFD {
                     *literal_count += 1;
                     id
                 }
+                Token::Tokener(c,) => {
+                    let id = literal_count.to_string();
+                    labels.insert(id.clone(), format!("Token('{}')", c));
+                    *literal_count += 1;
+                    id
+                }
                 Token::Union => {
                     let id = format!("alpha{}", *union_count);
                     *union_count += 1;
@@ -173,6 +179,9 @@ impl DirectAFD {
             } else if value.starts_with("Range") {
                 nullable_map.insert(key.clone(), false);
                 // println!("Inicializando {} como false (Range)", key);
+            } else if value.starts_with("Token") {
+                nullable_map.insert(key.clone(), false);
+                // println!("Inicializando {} como false (Token)", key);
             }
         }
 
@@ -212,6 +221,8 @@ impl DirectAFD {
                     changes = true;
                 }
             }
+
+            // Ejemplo para la cadena (a|b)c*(d|e)*f?{ID}[0-5]l+
             // let expected_map = HashMap::from([
             //     ("4".to_string(), false), ("beta2".to_string(), true), ("gama4".to_string(), false), 
             //     ("alpha1".to_string(), false), ("gama7".to_string(), false), ("6".to_string(), false), 
@@ -238,7 +249,7 @@ impl DirectAFD {
 
         // Primera pasada: Inicializar Literales
         for (key, value) in &tree_map {
-            if value.starts_with("Literal") || value.starts_with("Sentinel") || value.starts_with("Range") {
+            if value.starts_with("Literal") || value.starts_with("Sentinel") || value.starts_with("Range") || value.starts_with("Token"){
                 // Para Literals, firstpos y lastpos es solo su propia key
                 firstpos_map.insert(key.clone(), vec![key.clone()]);
                 lastpos_map.insert(key.clone(), vec![key.clone()]);
@@ -409,7 +420,7 @@ impl DirectAFD {
 
         // Asegurar que todos los literales y sentinels tengan followpos, aunque sea vacío
         for (key, value) in &tree_map {
-            if value.starts_with("Literal") || value.starts_with("Sentinel") || value.starts_with("Range") {
+            if value.starts_with("Literal") || value.starts_with("Sentinel") || value.starts_with("Range") || value.starts_with("Token") {
                 followpos_map.entry(key.clone()).or_insert(Vec::new());
             }
         }
@@ -417,7 +428,7 @@ impl DirectAFD {
         // Filtrar y eliminar los nodos que no sean Sentinel o Literal
         followpos_map.retain(|key, _| {
             if let Some(value) = tree_map.get(key) {
-                value.starts_with("Literal") || value.starts_with("Sentinel") || value.starts_with("Range") 
+                value.starts_with("Literal") || value.starts_with("Sentinel") || value.starts_with("Range") || value.starts_with("Token")
             } else {
                 false
             }
@@ -475,7 +486,7 @@ impl DirectAFD {
 
         let mut columns: HashSet<String> = HashSet::new();
         for (_key, value) in &labels_map {
-            if value.starts_with("Literal") || value.starts_with("Range") {
+            if value.starts_with("Literal") || value.starts_with("Range") || value.starts_with("Token") {
                 if let Some(start) = value.find('\'') {
                     if let Some(end) = value[start + 1..].find('\'') {
                         let extracted = &value[start + 1..start + 1 + end];

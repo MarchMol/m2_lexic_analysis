@@ -48,7 +48,7 @@ fn convert_minimized_afd_to_original(
 fn main() {
     // 1. Convertimos la regex a postfix
     //let postfix: Vec<Token> = inf_to_pos::inf_to_pos(r"a4?[A-Z][0-9]+r|s?\*\+\(\)a");
-    let postfix: Vec<Token> = inf_to_pos::inf_to_pos(r"(a|b)*[0-9]");
+    let postfix: Vec<Token> = inf_to_pos::inf_to_pos(r"(a|b)c*(d|e)*f?{ID}[0-5]l+");
     println!("{:?}", postfix);
     // 2. Inicializamos el grammar tree
     let mut gtree = grammar_tree::Tree::new();
@@ -78,17 +78,18 @@ fn main() {
 
     // // // 8. Generamos los estados y el AFD
     let (state_map, acceptance_states) = afd.create_states();
-    // // // Render
+
 
     // Suponiendo que tienes `state_map` y `acceptance_states` del AFD generado:
-    let (minimized_dfa, start_state) = minimize_dfa(&state_map, &acceptance_states);
-    print_minimized_dfa(&minimized_dfa);
-    println!("Estado inicial minimizado: {}", start_state);
+    // let (minimized_dfa, start_state) = minimize_dfa(&state_map, &acceptance_states);
+    // print_minimized_dfa(&minimized_dfa);
+    // println!("Estado inicial minimizado: {}", start_state);
     
-    let input = "b5";
-    let simulacion = simulate_afd(&state_map, &acceptance_states, input);
+    let input = "aID0l";
+    let simulacion = simulate_afd(&state_map, &acceptance_states, input, 'A');
     println!("La aceptación de la cadena {} es: {}", input, simulacion)
-
+    
+    // Render
     //view::render(&state_map, &acceptance_states, "afd");
 
     // // // 9. Aplicamos el algoritmo de Hopcroft para minimizar el AFD
