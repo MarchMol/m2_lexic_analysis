@@ -1,8 +1,10 @@
 mod direct_afd;
 mod grammar_tree;
 mod inf_to_pos;
+mod minimize;
 mod simulation;
 mod view;
+use minimize::{minimize_dfa, print_minimized_dfa};
 
 use simulation::simulate_afd;
 // use std::os::linux::raw::stat;
@@ -45,7 +47,8 @@ fn convert_minimized_afd_to_original(
 
 fn main() {
     // 1. Convertimos la regex a postfix
-    let postfix: Vec<Token> = inf_to_pos::inf_to_pos(r"a4?[A-Z][0-9]+r|s?\*\+\(\)a");
+    //let postfix: Vec<Token> = inf_to_pos::inf_to_pos(r"a4?[A-Z][0-9]+r|s?\*\+\(\)a");
+    let postfix: Vec<Token> = inf_to_pos::inf_to_pos(r"(a|b)*abb");
     println!("{:?}", postfix);
     // 2. Inicializamos el grammar tree
     let mut gtree = grammar_tree::Tree::new();
@@ -77,7 +80,12 @@ fn main() {
     let (state_map, acceptance_states) = afd.create_states();
     // // // Render
 
-    view::render(&state_map, &acceptance_states, "afd");
+    // Suponiendo que tienes `state_map` y `acceptance_states` del AFD generado:
+    let (minimized_dfa, start_state) = minimize_dfa(&state_map, &acceptance_states);
+    print_minimized_dfa(&minimized_dfa);
+    println!("Estado inicial minimizado: {}", start_state);
+
+    //view::render(&state_map, &acceptance_states, "afd");
 
     // // // 9. Aplicamos el algoritmo de Hopcroft para minimizar el AFD
     // let partitions = direct_afd::DirectAFD::hopcroft_minimize(
