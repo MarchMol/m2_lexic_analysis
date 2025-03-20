@@ -1,22 +1,44 @@
 use std::collections::{HashMap, HashSet};
 
 pub fn simulate_afd(state_map: &HashMap<char, HashMap<String, char>>, acceptance_states: &HashSet<char>, input: &str) -> bool {
-    let mut current_state = 'A';  // Comenzamos en el estado inicial
+    let mut current_state = 'A'; // Estado inicial
+
     for symbol in input.chars() {
-        // Verificar si hay una transición para el símbolo actual
         if let Some(transitions) = state_map.get(&current_state) {
-            if let Some(next_state) = transitions.get(&symbol) {
-                current_state = *next_state;  // Actualizar el estado actual con la transición
+            let mut next_state: Option<&char> = None;
+
+            for (key, state) in transitions {
+                if key.len() == 1 && key.chars().next().unwrap() == symbol {
+                    // Literales
+                    next_state = Some(state);
+                    break;
+                } else if key.contains('-') {
+                    // Rangos
+                    let parts: Vec<char> = key.chars().collect();
+                    if parts.len() == 3 && parts[1] == '-' {
+                        let start = parts[0];
+                        let end = parts[2];
+                        if start <= symbol && symbol <= end {
+                            next_state = Some(state);
+                            break;
+                        }
+                    }
+                }
+            }
+
+            if let Some(&state) = next_state {
+                current_state = state;
             } else {
-                // Si no hay transición definida para el símbolo, el AFD no acepta la cadena
+                // No hay transición válida
                 return false;
             }
         } else {
-            // Si no hay transiciones definidas para el estado actual, el AFD no acepta la cadena
+            // Estado no tiene transiciones
             return false;
         }
     }
-    
-    // Verificar si el estado final es un estado de aceptación
+
+    // Verificar estado final
     acceptance_states.contains(&current_state)
 }
+

@@ -48,7 +48,7 @@ fn convert_minimized_afd_to_original(
 fn main() {
     // 1. Convertimos la regex a postfix
     //let postfix: Vec<Token> = inf_to_pos::inf_to_pos(r"a4?[A-Z][0-9]+r|s?\*\+\(\)a");
-    let postfix: Vec<Token> = inf_to_pos::inf_to_pos(r"(a|b)*abb");
+    let postfix: Vec<Token> = inf_to_pos::inf_to_pos(r"(a|b)*[0-9]");
     println!("{:?}", postfix);
     // 2. Inicializamos el grammar tree
     let mut gtree = grammar_tree::Tree::new();
@@ -85,8 +85,9 @@ fn main() {
     print_minimized_dfa(&minimized_dfa);
     println!("Estado inicial minimizado: {}", start_state);
     
-    let input = "abb";
-    simulate_afd(&state_map, &acceptance_states, input);
+    let input = "b5";
+    let simulacion = simulate_afd(&state_map, &acceptance_states, input);
+    println!("La aceptación de la cadena {} es: {}", input, simulacion)
 
     //view::render(&state_map, &acceptance_states, "afd");
 
