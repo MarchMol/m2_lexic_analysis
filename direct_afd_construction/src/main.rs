@@ -84,6 +84,9 @@ fn main() {
     let (minimized_dfa, start_state) = minimize_dfa(&state_map, &acceptance_states);
     print_minimized_dfa(&minimized_dfa);
     println!("Estado inicial minimizado: {}", start_state);
+    
+    let input = "abb";
+    simulate_afd(&state_map, &acceptance_states, input);
 
     //view::render(&state_map, &acceptance_states, "afd");
 

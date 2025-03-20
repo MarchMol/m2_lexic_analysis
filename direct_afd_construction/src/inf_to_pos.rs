@@ -12,7 +12,8 @@ pub enum Token {
     RParen,            // )
     Sentinel,          // #
     Empty,             // % 
-    Optional           // ?
+    Optional,          // ?
+    Tokener(String),   // El token que le pertenece a una variable
 }
 fn check_range(start: char, end: char)->bool{
     if start>end{
@@ -54,6 +55,27 @@ fn tokenize(input: &str) -> Vec<Token> {
                     panic!("Invalid range syntax. Expected [a-z]");
                 }
             }
+            '{' => {
+                let mut id = String::new();
+
+                while let Some(c) = chars.next() {
+                    if c == '}' {
+                        if id.is_empty() {
+                            panic!("Invalid Tokener syntax. Expected a String between keys");
+                        }
+                        tokens.push(Token::Tokener(id.clone()));
+                        break;
+                    } else if c.is_alphanumeric() || c == '_' { 
+                        id.push(c);
+                    } else {
+                        panic!("Invalid character in Tokener. Expected alphanumeric or underscore.");
+                    }
+                }
+
+                if id.is_empty() {
+                    panic!("Invalid Tokener syntax. Expected a String between keys");
+                }
+            }
             _ => tokens.push(Token::Literal(c)),
         }
     }
@@ -66,20 +88,20 @@ fn implicit_concat(prev: &Token, next: &Token) -> bool {
         (prev, next),
         (
             // Char y Char -> concat
-            Token::Literal(_) | Token::Range(_, _) | Token::Sentinel | Token::Empty,
-            Token::Literal(_) | Token::Range(_, _) | Token::Sentinel | Token::Empty
+            Token::Literal(_) | Token::Range(_, _) | Token::Sentinel | Token::Empty | Token::Tokener(_),
+            Token::Literal(_) | Token::Range(_, _) | Token::Sentinel | Token::Empty | Token::Tokener(_)
         ) | (
             // Char y ( -> concat
-            Token::Literal(_) | Token::Range(_, _) | Token::Empty, 
+            Token::Literal(_) | Token::Range(_, _) | Token::Empty | Token::Tokener(_), 
             Token::LParen
         ) | (
             // ) y Char -> concat
             Token::RParen, 
-            Token::Literal(_) | Token::Range(_, _) | Token::Sentinel | Token::Empty
+            Token::Literal(_) | Token::Range(_, _) | Token::Sentinel | Token::Empty | Token::Tokener(_)
         ) | (
             // * y Char 
             Token::Kleene | Token::Plus,
-            Token::Literal(_) | Token::Range(_, _) | Token::Sentinel | Token::Empty
+            Token::Literal(_) | Token::Range(_, _) | Token::Sentinel | Token::Empty | Token::Tokener(_)
         ) | (
             // * y (
             Token::Kleene | Token::Plus, 
@@ -211,6 +233,9 @@ fn shunting_yard(tokens: Vec<Token>)->VecDeque<Token>{
                 }
             },
             Token::Sentinel=>{
+                queue.push_back(tk);
+            }
+            Token::Tokener(_)=>{
                 queue.push_back(tk);
             }
 

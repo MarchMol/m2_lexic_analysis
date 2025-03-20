@@ -102,6 +102,14 @@ impl Tree{
                     };
                     stack.push(newnode);
                 },
+                Token::Tokener(_) => {
+                    let newnode = TreeNode {
+                        value: tk,
+                        left: None,
+                        right: None
+                    };
+                    stack.push(newnode);
+                },
                 _=>{}
             }
             

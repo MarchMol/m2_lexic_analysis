@@ -1,6 +1,6 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
-pub fn simulate_afd(state_map: &HashMap<char, HashMap<char, char>>, acceptance_states: &Vec<char>, input: &str) -> bool {
+pub fn simulate_afd(state_map: &HashMap<char, HashMap<String, char>>, acceptance_states: &HashSet<char>, input: &str) -> bool {
     let mut current_state = 'A';  // Comenzamos en el estado inicial
     for symbol in input.chars() {
         // Verificar si hay una transición para el símbolo actual
