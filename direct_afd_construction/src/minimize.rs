@@ -1,25 +1,40 @@
 use std::collections::{HashMap, HashSet};
 
+/// Minimiza un DFA usando el algoritmo de Hopcroft.
+/// Devuelve (minimized_dfa, minimized_accept_states, minimized_start_state).
+/// Se asume que el estado inicial original es `'A'`.
 pub fn minimize_dfa(
     dfa: &HashMap<char, HashMap<String, char>>,
     accept_states: &HashSet<char>,
-) -> (HashMap<String, HashMap<String, String>>, String) {
-    // Conjunto de todos los estados (Q)
-    let mut states: HashSet<char> = dfa.keys().cloned().collect();
-
-    // Calcular el alfabeto: conjunto de símbolos presentes en las transiciones.
-    let mut alphabet: HashSet<String> = HashSet::new();
-    for transitions in dfa.values() {
-        for symbol in transitions.keys() {
-            alphabet.insert(symbol.clone());
+) -> (HashMap<char, HashMap<String, char>>, HashSet<char>, char) {
+    // Construir alfabeto
+    let mut alphabet = HashSet::new();
+    for trans in dfa.values() {
+        for sym in trans.keys() {
+            alphabet.insert(sym.clone());
         }
     }
 
-    // Inicializar la partición P con dos bloques: F (estados de aceptación) y Q \ F (el resto)
-    let f: HashSet<char> = accept_states.clone();
-    let non_f: HashSet<char> = states.difference(accept_states).cloned().collect();
+    // Completar DFA con estado sink '?'
+    let sink = '?';
+    let mut complete = dfa.clone();
+    complete.entry(sink).or_default();
+    for (&state, trans) in dfa {
+        let row = complete.entry(state).or_default();
+        for sym in &alphabet {
+            row.entry(sym.clone()).or_insert(sink);
+        }
+    }
+    // Sink se autorefiere
+    for sym in &alphabet {
+        complete.get_mut(&sink).unwrap().insert(sym.clone(), sink);
+    }
 
-    let mut P: Vec<HashSet<char>> = Vec::new();
+    // Partición inicial P = {F, Q\F}
+    let all_states: HashSet<char> = complete.keys().cloned().collect();
+    let f = accept_states.clone();
+    let non_f: HashSet<char> = all_states.difference(&f).cloned().collect();
+    let mut P = Vec::new();
     if !f.is_empty() {
         P.push(f.clone());
     }
@@ -27,60 +42,46 @@ pub fn minimize_dfa(
         P.push(non_f.clone());
     }
 
-    // Inicializar el conjunto de trabajo W con el bloque más pequeño (entre F y Q\F)
-    let mut W: Vec<HashSet<char>> = Vec::new();
-    if !f.is_empty() && !non_f.is_empty() {
+    // Conjunto de trabajo W
+    let mut W = if !f.is_empty() && !non_f.is_empty() {
         if f.len() <= non_f.len() {
-            W.push(f.clone());
+            vec![f.clone()]
         } else {
-            W.push(non_f.clone());
+            vec![non_f.clone()]
         }
     } else if !f.is_empty() {
-        W.push(f.clone());
-    } else if !non_f.is_empty() {
-        W.push(non_f.clone());
-    }
+        vec![f.clone()]
+    } else {
+        vec![non_f.clone()]
+    };
 
-    // --- Algoritmo de Hopcroft ---
-    while let Some(a) = W.pop() {
-        for symbol in &alphabet {
-            // X = { s en Q | δ(s, symbol) ∈ a }
-            let mut x: HashSet<char> = HashSet::new();
-            for s in &states {
-                if let Some(transitions) = dfa.get(s) {
-                    if let Some(&t) = transitions.get(symbol) {
-                        if a.contains(&t) {
-                            x.insert(*s);
-                        }
+    // Hopcroft refinement
+    while let Some(A) = W.pop() {
+        for sym in &alphabet {
+            // X = { s | δ(s, sym) ∈ A }
+            let mut X = HashSet::new();
+            for &s in &all_states {
+                if let Some(&t) = complete.get(&s).and_then(|m| m.get(sym)) {
+                    if A.contains(&t) {
+                        X.insert(s);
                     }
                 }
             }
-            // Refinar cada bloque Y en P que tenga una intersección no trivial con X.
-            let mut new_P: Vec<HashSet<char>> = Vec::new();
-            // Dentro del bucle que recorre cada bloque Y en P:
-            for y in P.iter() {
-                let intersection: HashSet<char> = y.intersection(&x).cloned().collect();
-                let difference: HashSet<char> = y.difference(&x).cloned().collect();
+
+            let mut new_P = Vec::new();
+            for Y in P.drain(..) {
+                let intersection: HashSet<char> = Y.intersection(&X).cloned().collect();
+                let difference: HashSet<char> = Y.difference(&X).cloned().collect();
+
                 if !intersection.is_empty() && !difference.is_empty() {
-                    // Separamos Y en dos bloques: Y ∩ X y Y \ X.
                     new_P.push(intersection.clone());
                     new_P.push(difference.clone());
 
-                    // Actualizar W: si Y ya estaba en W se reemplaza por ambos bloques,
-                    // de lo contrario se agrega el bloque de menor tamaño.
-                    let mut found = false;
-                    for i in 0..W.len() {
-                        if W[i] == *y {
-                            // Se elimina el bloque original y se insertan los nuevos.
-                            W.remove(i);
-                            W.push(intersection.clone());
-                            W.push(difference.clone());
-                            found = true;
-                            break;
-                        }
-                    }
-                    if !found {
-                        // Compara los tamaños clonando difference para evitar moverlo.
+                    if let Some(pos) = W.iter().position(|w| *w == Y) {
+                        W.remove(pos);
+                        W.push(intersection.clone());
+                        W.push(difference.clone());
+                    } else {
                         if intersection.len() <= difference.len() {
                             W.push(intersection.clone());
                         } else {
@@ -88,65 +89,47 @@ pub fn minimize_dfa(
                         }
                     }
                 } else {
-                    // Si Y no se ve afectado, se mantiene sin cambios.
-                    new_P.push(y.clone());
+                    new_P.push(Y);
                 }
             }
-
             P = new_P;
         }
     }
-    // --- Fin del algoritmo de Hopcroft ---
 
-    // Ahora cada bloque de P es una clase de equivalencia.
-    // Asignamos un nuevo nombre (por ejemplo, "A", "B", ...) a cada bloque.
-    let mut state_mapping: HashMap<char, String> = HashMap::new();
-    let mut current_name = 'A';
-    for block in P.iter() {
-        let new_name = current_name.to_string();
-        for s in block {
-            state_mapping.insert(*s, new_name.clone());
+    // Asignar nuevo nombre (char) a cada clase
+    let mut mapping = HashMap::new();
+    let mut next_name = 'A';
+    for block in &P {
+        for &st in block {
+            mapping.insert(st, next_name);
         }
-        current_name = ((current_name as u8) + 1) as char;
+        next_name = ((next_name as u8) + 1) as char;
     }
 
-    // Construir el DFA minimizado.
-    // Para cada clase de equivalencia (representada por el nombre asignado), definimos las transiciones.
-    let mut minimized: HashMap<String, HashMap<String, String>> = HashMap::new();
-    // Se recorre cada bloque (utilizando un representante arbitrario).
-    for block in P.iter() {
-        // Obtenemos el nombre asignado al bloque.
-        let representative = block.iter().next().unwrap();
-        let block_name = state_mapping.get(representative).unwrap().clone();
-
-        let mut trans: HashMap<String, String> = HashMap::new();
-        // Usamos las transiciones del representante para definir las del bloque.
-        if let Some(s_transitions) = dfa.get(representative) {
-            for symbol in &alphabet {
-                if let Some(&target) = s_transitions.get(symbol) {
-                    // La transición irá al bloque al que pertenece el estado destino.
-                    if let Some(target_name) = state_mapping.get(&target) {
-                        trans.insert(symbol.clone(), target_name.clone());
-                    }
-                }
-            }
+    // Construir DFA minimizado
+    let mut minimized = HashMap::new();
+    let mut minimized_accepts = HashSet::new();
+    for block in &P {
+        let repr = block.iter().next().unwrap();
+        let new_state = mapping[repr];
+        let mut row = HashMap::new();
+        for sym in &alphabet {
+            let target = complete.get(repr).unwrap().get(sym).unwrap();
+            row.insert(sym.clone(), mapping[target]);
         }
-        minimized.insert(block_name, trans);
-    }
-
-    // Se asume que el estado inicial del DFA original es 'A'
-    let start_state = state_mapping.get(&'A').unwrap_or(&"".to_string()).clone();
-
-    (minimized, start_state)
-}
-
-/// (Opcional) Función auxiliar para imprimir de forma amigable el DFA minimizado.
-pub fn print_minimized_dfa(minimized: &HashMap<String, HashMap<String, String>>) {
-    println!("===== DFA Minimizado =====");
-    for (state, transitions) in minimized {
-        println!("Estado: {}", state);
-        for (symbol, target) in transitions {
-            println!("  '{}' -> {}", symbol, target);
+        minimized.insert(new_state, row);
+        if block.iter().any(|s| accept_states.contains(s)) {
+            minimized_accepts.insert(new_state);
         }
     }
+
+    // Quitar estado sink del resultado
+    let sink_name = mapping[&sink];
+    minimized.remove(&sink_name);
+    minimized_accepts.remove(&sink_name);
+
+    // Estado inicial minimizado = mapeo de 'A'
+    let minimized_start = mapping[&'A'];
+
+    (minimized, minimized_accepts, minimized_start)
 }
