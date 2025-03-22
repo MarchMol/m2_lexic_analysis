@@ -559,20 +559,22 @@ impl DirectAFD {
                     });
                     // println!("State Queue after adding new state: {:?}", state_queue);
 
-                    // Verificar si el estado es de aceptación
-                    if column_vector.iter().any(|num| {
-                        if let Some(symbol) = labels_map.get(num) {
-                            symbol.starts_with("Sentinel")
-                        } else {
-                            false
-                        }
-                    }) {
-                        acceptance_states.insert(state_letter);
-                        // println!("State {} is acceptance state", state_letter);
-                    }
-
                     // Insertar o actualizar el valor en state_map
                     if let Some(assigned_letter) = assigned_letter {
+                        // Verificar si el estado es de aceptación
+                        if column_vector.iter().any(|num| {
+                            if let Some(symbol) = labels_map.get(num) {
+                                // println!("Checking if symbol '{}' (from {}) starts with 'Sentinel' to accept {}", symbol, num, assigned_letter);
+                                symbol.starts_with("Sentinel")
+                            } else {
+                                // println!("Number {} not found in labels_map", num);
+                                false
+                            }
+                        }) {
+                            acceptance_states.insert(assigned_letter.chars().next().unwrap());
+                            // println!("State {} is acceptance state", state_letter);
+                        }
+
                         state_map
                             .entry(state_key.chars().next().unwrap())
                             .or_insert_with(HashMap::new)
@@ -593,8 +595,8 @@ impl DirectAFD {
             // println!("-------------------------------------------");
         }
 
-        println!("Mapa de Estados: {:?}", state_map);
-        println!("Estados de aceptación: {:?}", acceptance_states);
+        // println!("Mapa de Estados: {:?}", state_map);
+        // println!("Estados de aceptación: {:?}", acceptance_states);
 
         (state_map, acceptance_states)
     }
