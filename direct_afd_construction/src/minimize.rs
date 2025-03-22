@@ -25,12 +25,11 @@ pub fn minimize_dfa(
             row.entry(sym.clone()).or_insert(sink);
         }
     }
-    // Sink se autorefiere
     for sym in &alphabet {
         complete.get_mut(&sink).unwrap().insert(sym.clone(), sink);
     }
 
-    // Partición inicial P = {F, Q\F}
+    // Partición inicial P = {F, Q\\F}
     let all_states: HashSet<char> = complete.keys().cloned().collect();
     let f = accept_states.clone();
     let non_f: HashSet<char> = all_states.difference(&f).cloned().collect();
@@ -43,28 +42,21 @@ pub fn minimize_dfa(
     }
 
     // Conjunto de trabajo W
-    let mut W = if !f.is_empty() && !non_f.is_empty() {
-        if f.len() <= non_f.len() {
-            vec![f.clone()]
-        } else {
-            vec![non_f.clone()]
-        }
-    } else if !f.is_empty() {
-        vec![f.clone()]
-    } else {
-        vec![non_f.clone()]
-    };
+    let mut W = vec![P[0].clone()];
 
     // Hopcroft refinement
     while let Some(A) = W.pop() {
         for sym in &alphabet {
-            // X = { s | δ(s, sym) ∈ A }
             let mut X = HashSet::new();
             for &s in &all_states {
-                if let Some(&t) = complete.get(&s).and_then(|m| m.get(sym)) {
-                    if A.contains(&t) {
-                        X.insert(s);
-                    }
+                if complete
+                    .get(&s)
+                    .and_then(|m| m.get(sym))
+                    .copied()
+                    .filter(|t| A.contains(t))
+                    .is_some()
+                {
+                    X.insert(s);
                 }
             }
 
@@ -72,21 +64,17 @@ pub fn minimize_dfa(
             for Y in P.drain(..) {
                 let intersection: HashSet<char> = Y.intersection(&X).cloned().collect();
                 let difference: HashSet<char> = Y.difference(&X).cloned().collect();
-
                 if !intersection.is_empty() && !difference.is_empty() {
                     new_P.push(intersection.clone());
                     new_P.push(difference.clone());
-
                     if let Some(pos) = W.iter().position(|w| *w == Y) {
                         W.remove(pos);
-                        W.push(intersection.clone());
-                        W.push(difference.clone());
+                        W.push(intersection);
+                        W.push(difference);
+                    } else if intersection.len() <= difference.len() {
+                        W.push(intersection);
                     } else {
-                        if intersection.len() <= difference.len() {
-                            W.push(intersection.clone());
-                        } else {
-                            W.push(difference.clone());
-                        }
+                        W.push(difference);
                     }
                 } else {
                     new_P.push(Y);
@@ -96,7 +84,7 @@ pub fn minimize_dfa(
         }
     }
 
-    // Asignar nuevo nombre (char) a cada clase
+    // Mapear cada clase a un nuevo char
     let mut mapping = HashMap::new();
     let mut next_name = 'A';
     for block in &P {
@@ -110,12 +98,16 @@ pub fn minimize_dfa(
     let mut minimized = HashMap::new();
     let mut minimized_accepts = HashSet::new();
     for block in &P {
-        let repr = block.iter().next().unwrap();
-        let new_state = mapping[repr];
+        let repr = *block.iter().next().unwrap();
+        let new_state = mapping[&repr];
         let mut row = HashMap::new();
         for sym in &alphabet {
-            let target = complete.get(repr).unwrap().get(sym).unwrap();
-            row.insert(sym.clone(), mapping[target]);
+            let target = complete
+                .get(&repr)
+                .and_then(|m| m.get(sym))
+                .copied()
+                .unwrap_or(sink);
+            row.insert(sym.clone(), mapping[&target]);
         }
         minimized.insert(new_state, row);
         if block.iter().any(|s| accept_states.contains(s)) {
@@ -123,13 +115,12 @@ pub fn minimize_dfa(
         }
     }
 
-    // Quitar estado sink del resultado
+    // Eliminar sink
     let sink_name = mapping[&sink];
     minimized.remove(&sink_name);
     minimized_accepts.remove(&sink_name);
 
-    // Estado inicial minimizado = mapeo de 'A'
+    // Nuevo estado inicial = mapping de 'A'
     let minimized_start = mapping[&'A'];
-
     (minimized, minimized_accepts, minimized_start)
 }
