@@ -2,18 +2,19 @@ mod direct_afd;
 mod grammar_tree;
 mod inf_to_pos;
 mod minimize;
-mod simulation;
+mod token_identifier;
 mod view;
 
 use crate::direct_afd::DirectAFD;
 use crate::inf_to_pos::Token;
 use minimize::minimize_dfa;
-use simulation::simulate_afd;
+use token_identifier::asignar_token;
 use std::collections::HashSet;
 use std::rc::Rc;
 
 fn main() {
-    let regex = r"(a(b|c?d+)[A-Z][0-9]*|x(yz)*z)?w+";
+    // let regex = r"(a(b|c?d+)[A-Z][0-9]*|x(yz)*z)?w+";
+    let regex = r"((if){IF})|([a-z]+{ID})|((ab|d){TEST})";
     println!("Regex: {}", regex);
 
     let postfix: Vec<Token> = inf_to_pos::inf_to_pos(regex);
@@ -47,15 +48,16 @@ fn main() {
     println!("Aceptación minimizada: {:?}", minimized_accept_states);
     println!("Estado inicial minimizado: {}\n", minimized_start);
 
-    let tests = ["acdD999ww", "acA0w", "w", "", "acdD123www", "adAZ"];
+    // let tests = ["acdD999ww", "acA0w", "w", "", "acdD123www", "adAZ"];
+    let tests = ["aabasdfdsjfedsf", "if", "ab", "d", "dif9"];
     for &input in &tests {
-        let orig = simulate_afd(&state_map, &acceptance_states, input, 'A');
-        let mini = simulate_afd(
+        let orig = asignar_token(&state_map, input, 'A', &acceptance_states);
+        let mini = asignar_token(
             &minimized_map,
-            &minimized_accept_states,
             input,
             minimized_start,
+            &acceptance_states
         );
-        println!("{} → original: {}, minimizado: {}", input, orig, mini);
+        println!("Posibles tokens para {} → original: {:?}, minimizado: {:?}", input, orig, mini);
     }
 }
