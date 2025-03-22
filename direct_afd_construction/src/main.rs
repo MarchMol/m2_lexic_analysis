@@ -8,9 +8,9 @@ mod view;
 use crate::direct_afd::DirectAFD;
 use crate::inf_to_pos::Token;
 use minimize::minimize_dfa;
-use token_identifier::asignar_token;
 use std::collections::HashSet;
 use std::rc::Rc;
+use token_identifier::asignar_token;
 
 fn main() {
     // let regex = r"(a(b|c?d+)[A-Z][0-9]*|x(yz)*z)?w+";
@@ -52,12 +52,16 @@ fn main() {
     let tests = ["aabasdfdsjfedsf", "if", "ab", "d", "dif9"];
     for &input in &tests {
         let orig = asignar_token(&state_map, input, 'A', &acceptance_states);
+        // Se modifica aquí: se pasa el conjunto de aceptación minimizado.
         let mini = asignar_token(
             &minimized_map,
             input,
             minimized_start,
-            &acceptance_states
+            &minimized_accept_states,
         );
-        println!("Posibles tokens para {} → original: {:?}, minimizado: {:?}", input, orig, mini);
+        println!(
+            "Posibles tokens para {} → original: {:?}, minimizado: {:?}",
+            input, orig, mini
+        );
     }
 }

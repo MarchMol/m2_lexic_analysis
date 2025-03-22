@@ -1,9 +1,9 @@
 use std::collections::{HashMap, HashSet};
 
 fn leer_cadena(
-    state_map: &HashMap<char, HashMap<String, char>>, 
+    state_map: &HashMap<char, HashMap<String, char>>,
     input: &str,
-    first_state: char
+    first_state: char,
 ) -> HashSet<char> {
     let mut current_states = HashSet::new();
     let mut next_state = HashSet::new();
@@ -22,10 +22,10 @@ fn leer_cadena(
         for &current_state in &current_states {
             if let Some(transitions) = state_map.get(&current_state) {
                 // println!("Posibles transiciones desde '{}': {:?}", current_state, transitions);
-    
+
                 for (key, &state) in transitions {
                     // println!("  Probando clave de transición: \"{}\"", key);
-                    
+
                     if key.len() == 1 && key.chars().next().unwrap() == symbol {
                         // Literales
                         // println!("  → Coincidencia exacta con literal '{}'", key);
@@ -63,10 +63,10 @@ fn leer_cadena(
 }
 
 pub fn asignar_token(
-    state_map: &HashMap<char, HashMap<String, char>>, 
+    state_map: &HashMap<char, HashMap<String, char>>,
     input: &str,
     first_state: char,
-    acceptance_states: &HashSet<char> 
+    acceptance_states: &HashSet<char>,
 ) -> HashSet<String> {
     let last_state_list = leer_cadena(state_map, input, first_state);
     let mut valid_transitions = HashSet::new();
@@ -75,7 +75,7 @@ pub fn asignar_token(
         if let Some(transitions) = state_map.get(&state) {
             for (transition, &next_state) in transitions {
                 if acceptance_states.contains(&next_state) {
-                    valid_transitions.insert(transition.clone());  // Guardamos la transición en lugar del estado
+                    valid_transitions.insert(transition.clone()); // Guardamos la transición en lugar del estado
                 }
             }
         }
@@ -83,4 +83,3 @@ pub fn asignar_token(
 
     valid_transitions
 }
-
