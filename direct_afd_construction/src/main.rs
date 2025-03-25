@@ -13,7 +13,7 @@ use std::rc::Rc;
 use token_identifier::asignar_token;
 mod lex_reader;
 mod reader;
-
+mod utilities;
 mod compile;
 
 fn generate(regx: String)->(HashMap<char, HashMap<String, char>>,HashSet<char>,char,Vec<String>){
@@ -78,7 +78,7 @@ fn simulate(
         }
         greedy_end+=1;
         if last_start>=greedy_end{
-            panic!("Unexpected token {}",lexem);
+            panic!("Token no identificado {}",lexem);
         } else{
             let biggest_lex:String = input.chars().skip(last_start).take(greedy_end - last_start).collect();
             // println!("FINAL ({}-{}) Lex: \"{}\", match: {:?}", last_start, greedy_end,biggest_lex, greedy_match);
@@ -97,13 +97,34 @@ fn simulate(
     tk_list
 }
 fn main(){
+    
     let input = 
-    r"while 1.5 < -6 { num = 65.}";
-    println!("{:?}",input);
-    let test = compile::gen_reg();
-    let (minimized_map, minimized_accept_states,minimized_start, token_list) = generate(test);
+    r"while 1.5 < -6 { 
+        num = 65.
+    }";
+    let (reg, actions) = compile::gen_reg();
+    let copy = reg.clone();
+    let (minimized_map, minimized_accept_states,minimized_start, token_list) = generate(reg);
     let toks = simulate(input.to_string(), minimized_map, minimized_accept_states, minimized_start, token_list);
-    println!("{:?}",toks);
+    let mut executable: String = "fn act(toks: Vec<String>){
+    let tk_list:Vec<String>= Vec::new();
+    for t in toks{".to_string();
+    for (key, value) in &actions {
+        executable+=&format!("if t==\"{}\" {{ {} }}\n",key, value);
+    }
+
+    executable+="   }\n     println!(\"{:?}\",tk_list); \n}\nfn main() {\n";
+    executable+= &format!("let reg = r\"{}\";\n",copy);
+    executable+="let (minimized_map, minimized_accept_states,minimized_start, token_list) = generate(reg);
+    let toks = simulate(input.to_string(), minimized_map, minimized_accept_states, minimized_start, token_list);
+    let mut reslut: Vec<String> = Vec::new();
+    for t in toks{
+        act(t);
+    }
+}";
+    compile::creat_file(executable);
+
+
 }
 // fn main() {
 //     // let regex = r"(a(b|c?d+)[A-Z][0-9]*|x(yz)*z)?w+";

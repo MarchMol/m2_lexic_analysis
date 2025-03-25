@@ -16,9 +16,7 @@ fn clean_reg(reg: &str)->String{
     }
     new_reg
 }
-fn remove_whitespace(s: &str) -> String {
-    s.chars().filter(|c| !c.is_whitespace()).collect()
-}
+
 fn split_line(line: &str)->(String, String){
    
     // check
@@ -84,7 +82,7 @@ fn split_line(line: &str)->(String, String){
     // println!("Action: {}",action);
     (argument, action)
 }
-fn get_tk_act(line: &str)->(String, String){
+fn get_tk_act(line: &str, line_num: u8)->(String,String,u8){
     let mut splitted= split_line(line);
     let act = splitted.1;
     let reg = clean_reg(&splitted.0);
@@ -101,13 +99,14 @@ fn get_tk_act(line: &str)->(String, String){
     //     // TODO raise exception
     // }
     // (reg, act)
-    (reg,act)
+    (reg,act,line_num)
 }
-pub fn get_line_array(filename:&str)->Vec<(String, String)>{
+pub fn get_line_array(filename:&str)->Vec<(String,String, u8)>{
     let mut definitions: Vec<String> = Vec::new();
-    let mut actions: Vec<(String,String)> = Vec::new();
+    let mut actions: Vec<(String,String, u8)> = Vec::new();
     let mut def_started = false;
     let mut act_started = false;
+    let mut line_num = 0;
     if let Ok(lines) = read_lines(filename) {
         for line in lines {
             if let Ok(content) = line {
@@ -128,13 +127,13 @@ pub fn get_line_array(filename:&str)->Vec<(String, String)>{
                     if def_started{
                         definitions.push(content);
                     } else if act_started{
-                        let entry = get_tk_act(&content);
+                        let entry = get_tk_act(&content, line_num);
                         actions.push(entry);
                     }
                 }
+                line_num+=1;
             }
         }
     }
-
     actions
 }

@@ -1,18 +1,17 @@
 {
 }
 rule actions =
-    (-?)[0-9]+"."[0-9]*               { FLOAT }
-    | "-"[0-9]+                       { SIGNED }
-    | [0-9]+                          { INT }
-    | "while"                         { WHILE }
-    | [a-z]+                          { ID }
-    | "\{"                            { L_BRACE }
-    | "\}"                            { R_BRACE }
-    | "="                             { ASSIGN }
-    | ">"                             { GT }
-    | ">="                            { GTE }
-    | "<"                             { LT }
-    | "<="                            { LTE }
-    | "~"                               { CRACK_CARAJO }
-    | (" "|"\n"|"\t"|"\s")+           { DELIM }
-    | "return"           { RETURN }
+    (-?)[0-9]+"."[0-9]*               { tk_list.push("FLOAT"); }
+    | "-"[0-9]+                       { tk_list.push("SIGNED"); }
+    | [0-9]+                          { tk_list.push("INT"); }
+    | "while"                         { tk_list.push("WHILE"); }
+    | [a-z]+                          { tk_list.push("ID"); }
+    | "\{"                            { tk_list.push("L_BRACE"); }
+    | "\}"                            { tk_list.push("R_BRACE"); }
+    | "="                             { tk_list.push("ASIGN"); }
+    | ">"                             { tk_list.push("GT"); }
+    | ">="                            { tk_list.push("GTE"); }
+    | "<"                             { tk_list.push("LT"); }
+    | "<="                            { tk_list.push("LTE"); }
+    | (" "|"\n"|"\t"|"\s")+           { }
+    | "return"           { tk_list.push("RETURN"); }
