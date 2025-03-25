@@ -28,11 +28,25 @@ fn tokenize(input: &str) -> Vec<Token> {
     let mut chars = input.chars().peekable();
     while let Some(c) = chars.next() {
         match c {
+            c if c.is_whitespace() =>{
+                tokens.push(Token::Literal(c))
+            }
             '\\' => {
                 if let Some(next_c) = chars.next() {
-                    tokens.push(Token::Literal(next_c))
+                    if !['n','t','r'].contains(&next_c){
+                        tokens.push(Token::Literal(next_c))
+                    } else{
+                        if next_c == 'n'{
+                            tokens.push(Token::Literal('\n'))
+                        } else if next_c == 't'{
+                            tokens.push(Token::Literal('\t'))
+                        } else if next_c == 'r'{
+                            tokens.push(Token::Literal('\r'))
+                        }
+                    }
                 }
             },
+            
             '?' => tokens.push(Token::Optional),
             '#' => tokens.push(Token::Sentinel),
             '*' => tokens.push(Token::Kleene),
