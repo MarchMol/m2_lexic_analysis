@@ -69,44 +69,44 @@ pub fn asignar_token(
     acceptance_states: &HashSet<char>,
     token_list: &Vec<String>,
 ) -> String {
-
-    println!("=== DEBUG: asignar_token ===");
-    println!("Input recibido: {}", input);
-    println!("Estado inicial: {}", first_state);
-    println!("Estados de aceptación: {:?}", acceptance_states);
-    println!("Token list: {:?}", token_list);
+    // println!("input: {}",input);
+    // println!("=== DEBUG: asignar_token ===");
+    // println!("Input recibido: {}", input);
+    // println!("Estado inicial: {}", first_state);
+    // println!("Estados de aceptación: {:?}", acceptance_states);
+    // println!("Token list: {:?}", token_list);
 
     let last_state_list = leer_cadena(state_map, input, first_state);
-    println!("Últimos estados alcanzados: {:?}", last_state_list);
+    // println!("Últimos estados alcanzados: {:?}", last_state_list);
 
     let mut valid_transitions = HashSet::new();
 
     for &state in &last_state_list {
         if let Some(transitions) = state_map.get(&state) {
-            println!("Estado {} tiene transiciones: {:?}", state, transitions);
+            // println!("Estado {} tiene transiciones: {:?}", state, transitions);
             for (transition, &next_state) in transitions {
                 if acceptance_states.contains(&next_state) {
-                    println!(
-                        "Transición válida encontrada: '{}' -> Estado {}",
-                        transition, next_state
-                    );
+                    // println!(
+                    //     "Transición válida encontrada: '{}' -> Estado {}",
+                    //     transition, next_state
+                    // );
                     valid_transitions.insert(transition.clone()); // Guardamos la transición
                 }
             }
         } else {
-            println!("Estado {} no tiene transiciones.", state);
+            // println!("Estado {} no tiene transiciones.", state);
         }
     }
-
-    println!("Transiciones válidas detectadas: {:?}", valid_transitions);
+    // println!("VALID {:?}",valid_transitions);
+    // println!("Transiciones válidas detectadas: {:?}", valid_transitions);
 
     for token in token_list {
         if valid_transitions.contains(token) {
-            println!("Token encontrado en la lista: {}", token);
+            // println!("Token encontrado en la lista: {}", token);
             return token.clone();
         }
     }
     
-    println!("Ningún token encontrado, devolviendo 'UNKNOWN'");
+    // Ningún token encontrado, devolviendo 'UNKNOWN'
     String::from("UNKNOWN")
 }

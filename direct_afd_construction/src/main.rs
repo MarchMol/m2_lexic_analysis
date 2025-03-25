@@ -37,7 +37,7 @@ fn get_token_type(input: String,
     minimized_map: &HashMap<char, HashMap<String, char>>, 
     minimized_accept_states:  &HashSet<char>,
     minimized_start: char,
-    token_list: Vec<String>,
+    token_list: &Vec<String>,
 )-> String {
         let mini = asignar_token(
             &minimized_map,
@@ -53,7 +53,9 @@ fn simulate(
     input: String, 
     minimized_map: HashMap<char, HashMap<String, char>>, 
     minimized_accept_states:  HashSet<char>,
-    minimized_start: char)->Vec<String>{
+    minimized_start: char,
+    token_list: Vec<String>,
+    )->Vec<String>{
     let mut tk_list: Vec<String> = Vec::new();
     let len = input.len();
     let mut last_start = 0;
@@ -61,30 +63,31 @@ fn simulate(
 
     while !condition{
         let mut lexem = String::new();
-        let mut greedy_match: HashSet<String>= HashSet::new();
+        let mut greedy_match = String::new();
         let mut greedy_end = 0;
         for i in last_start..len{
             let c = input.char_indices().nth(i).map(|(_, c)| c).unwrap();
             lexem.push(c);
-            let cmatch = getTtype( 
-                lexem.to_string(), &minimized_map, &minimized_accept_states, minimized_start);
-            if !cmatch.is_empty(){
+            let cmatch = get_token_type( 
+                lexem.to_string(), &minimized_map, &minimized_accept_states, minimized_start, &token_list);
+            if cmatch!="UNKNOWN"{
                 greedy_match = cmatch;
                 greedy_end = i
             }
+            // println!("({}-{}) Lex: \"{}\", match: {:?}", last_start, greedy_end,lexem, greedy_match);
         }
         greedy_end+=1;
         if last_start>=greedy_end{
             panic!("Unexpected token {}",lexem);
         } else{
             let biggest_lex:String = input.chars().skip(last_start).take(greedy_end - last_start).collect();
-            println!("FINAL ({}-{}) Lex: \"{}\", match: {:?}", last_start, greedy_end,biggest_lex, greedy_match);
+            // println!("FINAL ({}-{}) Lex: \"{}\", match: {:?}", last_start, greedy_end,biggest_lex, greedy_match);
         }
-        
-        if greedy_match.is_empty(){
+        // println!("GREEDY MATCH{}",greedy_match);
+        if greedy_match == "UNKNOWN"{
             last_start+=1;
         } else{
-            tk_list.push(format!("{:?}",greedy_match));
+            tk_list.push(greedy_match);
             last_start = greedy_end;
         }
         if greedy_end == len{
@@ -94,7 +97,8 @@ fn simulate(
     tk_list
 }
 fn main(){
-    let input = "while -1 23 0. 523.523 -0.0";
+    let input = "while -1 23 ~ 0. 523.523 -0.0";
+    println!("Input: {}",input);
     let test = compile::gen_reg();
     // println!("{:?}",test);
     let (minimized_map, minimized_accept_states,minimized_start, token_list) = generate(test);

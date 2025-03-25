@@ -123,6 +123,6 @@ pub fn minimize_dfa(
     // Nuevo estado inicial = mapping de 'A'
     let minimized_start = mapping[&'A'];
 
-    println!("Mapa de estados: {:?}", minimized);
+    // println!("Mapa de estados: {:?}", minimized);
     (minimized, minimized_accepts, minimized_start)
 }
