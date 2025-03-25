@@ -32,13 +32,14 @@ impl DirectAFD {
     }
 
     // Lee el árbol y guarda sus labels
-    pub fn read_tree(&self) -> (HashMap<String, String>, String) {
+    pub fn read_tree(&self) -> (HashMap<String, String>, String, Vec<String>) {
         let mut labels = HashMap::new();
         let mut literal_count = 1;
         let mut union_count = 1;
         let mut kleene_count = 1;
         let mut concat_count = 1;
         let mut root_key = String::new();
+        let mut token_list = Vec::new();
 
         // Función recursiva que recorre el árbol y asigna etiquetas
         fn traverse(
@@ -48,6 +49,7 @@ impl DirectAFD {
             union_count: &mut usize,
             kleene_count: &mut usize,
             concat_count: &mut usize,
+            token_list: &mut Vec<String>,
         ) -> String {
             // println!("Visitando nodo: {:?}", node.get_value());
 
@@ -60,6 +62,7 @@ impl DirectAFD {
                     union_count,
                     kleene_count,
                     concat_count,
+                    token_list,
                 );
                 // println!("Nodo izquierdo: {:?} -> ID: {:?}", left.get_value(), id);
                 id
@@ -72,6 +75,7 @@ impl DirectAFD {
                     union_count,
                     kleene_count,
                     concat_count,
+                    token_list,
                 );
                 // println!("Nodo izquierdo: {:?} -> ID: {:?}", right.get_value(), id);
                 id
@@ -94,6 +98,7 @@ impl DirectAFD {
                 Token::Tokener(c,) => {
                     let id = literal_count.to_string();
                     labels.insert(id.clone(), format!("Token('{}')", c));
+                    token_list.push(c.to_string());
                     *literal_count += 1;
                     id
                 }
@@ -151,17 +156,18 @@ impl DirectAFD {
                 &mut union_count,
                 &mut kleene_count,
                 &mut concat_count,
+                &mut token_list,
             );
 
             // println!("Árbol etiquetado: {:?}", labels);
             // println!("Clave raíz: {}", root_key);
         }
 
-        (labels, root_key)
+        (labels, root_key, token_list)
     }
 
     pub fn find_nullable(&self) -> HashMap<String, bool> {
-        let (tree_map, _key) = self.read_tree();
+        let (tree_map, _key, _token_list) = self.read_tree();
         let mut nullable_map = HashMap::new();
         // println!("Entrada: {:?}", tree_map);
 
@@ -243,7 +249,7 @@ impl DirectAFD {
     }
 
     pub fn find_first_last_pos(&self,) -> (HashMap<String, Vec<String>>, HashMap<String, Vec<String>>) {
-        let (tree_map, _key) = self.read_tree();
+        let (tree_map, _key, _token_list) = self.read_tree();
         let mut firstpos_map: HashMap<String, Vec<String>> = HashMap::new();
         let mut lastpos_map: HashMap<String, Vec<String>> = HashMap::new();
 
@@ -372,7 +378,7 @@ impl DirectAFD {
     }
 
     pub fn find_followpos(&self) -> HashMap<String, Vec<String>> {
-        let (tree_map, _key) = self.read_tree();
+        let (tree_map, _key, _token_list) = self.read_tree();
         let mut followpos_map: HashMap<String, Vec<String>> = HashMap::new();
 
         // Obtener firstpos y lastpos con la función existente
@@ -456,7 +462,7 @@ impl DirectAFD {
         followpos_map
     }
 
-    pub fn create_states(&mut self) -> (HashMap<char, HashMap<String, char>>, HashSet<char>) {
+    pub fn create_states(&mut self) -> (HashMap<char, HashMap<String, char>>, HashSet<char>, Vec<String>) {
         let mut state_map: HashMap<char, HashMap<String, char>> = HashMap::new(); // Mapa de estados y sus transiciones
         let mut acceptance_states: HashSet<char> = HashSet::new(); // Lista de estados de aceptación
         let mut state_queue: HashMap<String, Vec<String>> = HashMap::new(); // Cola de estados por procesar
@@ -465,7 +471,7 @@ impl DirectAFD {
         let mut state_letter = 'A';
 
         // Obtener el firstpos del nodo raíz
-        let (mut labels_map, root_key) = self.read_tree();
+        let (mut labels_map, root_key, token_list) = self.read_tree();
         let root_firstpos = self
             .find_first_last_pos()
             .0
@@ -598,7 +604,7 @@ impl DirectAFD {
         // println!("Mapa de Estados: {:?}", state_map);
         // println!("Estados de aceptación: {:?}", acceptance_states);
 
-        (state_map, acceptance_states)
+        (state_map, acceptance_states, token_list)
     }
 
 }
