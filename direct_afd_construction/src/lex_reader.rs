@@ -16,10 +16,39 @@ fn clean_reg(reg: &str)->String{
     }
     new_reg
 }
-
+fn remove_whitespace(s: &str) -> String {
+    s.chars().filter(|c| !c.is_whitespace()).collect()
+}
 fn split_line(line: &str)->(String, String){
-    let mut splitted:Vec<&str> = Vec::new();
-    let mut line_chars = line.chars().into_iter().peekable();
+   
+    // check
+    let mut clean = false;
+    let mut start = 0;
+    let mut is_first = true;
+    let mut check_line = line.chars().into_iter();
+    for (i,c) in line.char_indices(){
+        if !c.is_whitespace(){
+            if is_first{
+                if c=='|'{
+                    start = i;
+                    is_first = false;
+                    clean = true;
+                } else{
+                    is_first = false;
+                }
+            } else{
+                break;
+            }
+        }
+    }
+
+    let n_line: String = if clean {
+        line.chars().skip(start+1).collect()
+    } else {
+        line.to_string()
+    };
+
+    let mut line_chars = n_line.chars().into_iter().peekable();
     let mut last = '#';
     let mut argument = String::new();
     let mut action = String::new();
@@ -53,7 +82,6 @@ fn split_line(line: &str)->(String, String){
     }
     // println!("Argument: {}",argument);
     // println!("Action: {}",action);
-    splitted = line.split_whitespace().collect();
     (argument, action)
 }
 fn get_tk_act(line: &str)->(String, String){
@@ -83,22 +111,19 @@ pub fn get_line_array(filename:&str)->Vec<(String, String)>{
     if let Ok(lines) = read_lines(filename) {
         for line in lines {
             if let Ok(content) = line {
-                if content == "%{"{
+                
+                if content == "{"{
                     if !def_started && !act_started{ // Start definition stage
                         def_started = true;
                     }     
-                } else if content == "%}"{
+                } else if content == "}"{
                     if def_started && !act_started{ // End definition stage
                         def_started = false;
                     }
-                } else if content.contains("%%"){
+                } else if content.contains("rule actions ="){
                     if !def_started && !act_started{ // Start definition stage
                         act_started = true;
                     }    
-                } else if content.contains("%%"){
-                    if !def_started && act_started{ // End definition stage
-                        act_started = false;
-                    }
                 } else{
                     if def_started{
                         definitions.push(content);

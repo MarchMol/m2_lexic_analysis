@@ -97,10 +97,10 @@ fn simulate(
     tk_list
 }
 fn main(){
-    let input = "while -1 23 ~ 0. 523.523 -0.0";
-    println!("Input: {}",input);
+    let input = 
+    r"while 1.5 < -6 { num = 65.}";
+    println!("{:?}",input);
     let test = compile::gen_reg();
-    // println!("{:?}",test);
     let (minimized_map, minimized_accept_states,minimized_start, token_list) = generate(test);
     let toks = simulate(input.to_string(), minimized_map, minimized_accept_states, minimized_start, token_list);
     println!("{:?}",toks);

@@ -4,7 +4,7 @@ use std::io::Write;
 
 
 pub fn gen_reg()->String{
-    let lex = "./test2.lex";
+    let lex = "./test.yal";
     let acts = get_line_array(lex);
     let mut reg_array : Vec<String> = Vec::new();
     for ac in acts{
@@ -15,7 +15,7 @@ pub fn gen_reg()->String{
 }
 
 pub fn compile()->String{
-    let lex = "./test.lex";
+    let lex = "./test.yal";
     let acts = get_line_array(lex);
     let mut rslt = String::new();
     for ac in acts{
